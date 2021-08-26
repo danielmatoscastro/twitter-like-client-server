@@ -1,0 +1,3 @@
+/home/daniel/data/meus-repositorios/twitter/client/cmake-build-debug/CMakeFiles/rebuild_cache.dir
+/home/daniel/data/meus-repositorios/twitter/client/cmake-build-debug/CMakeFiles/edit_cache.dir
+/home/daniel/data/meus-repositorios/twitter/client/cmake-build-debug/CMakeFiles/twitter.dir
