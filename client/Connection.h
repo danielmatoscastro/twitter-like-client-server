@@ -24,14 +24,17 @@ using namespace std;
 class Connection {
 public:
     Connection(uint16_t port, const char *server_addr);
-    char * send_message(const char * msg);
+    void send_message(const char * msg);
+    char * receive_message();
     void close();
+    bool is_closed();
 private:
     struct sockaddr_in server;
     int sockfd;
     int len = sizeof(server);
     char buffer_in[LEN];
     char buffer_out[LEN];
+    bool closed;
 };
 
 

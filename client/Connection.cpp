@@ -25,21 +25,29 @@ Connection::Connection(uint16_t port, const char *server_addr) {
         exit(EXIT_FAILURE);
     }
 
-
+    this->closed = false;
 }
 
-char * Connection::send_message(const char* msg) {
-    memset(buffer_in, 0x0, LEN);
+bool Connection::is_closed() {
+    return this->closed;
+}
+
+void Connection::send_message(const char* msg) {
     memset(buffer_out, 0x0, LEN);
     strcpy(buffer_out, msg);
 
     send(sockfd, buffer_out, strlen(msg)+1, 0);
+}
 
+char * Connection::receive_message() {
+    memset(buffer_in, 0x0, LEN);
     recv(sockfd, buffer_in, LEN, 0);
-
     return buffer_in;
 }
 
 void Connection::close() {
-    ::close(sockfd);
+    if (!this->closed) {
+        this->closed = true;
+        ::close(sockfd);
+    }
 }

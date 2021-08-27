@@ -73,48 +73,49 @@ main(void) {
     }
     fprintf(stdout, "Listening on port %d\n", PORT);
 
-    socklen_t client_len = sizeof(client);
-    if ((clientfd=accept(serverfd,
-                         (struct sockaddr *) &client, &client_len )) == -1) {
-        perror("Accept error:");
-        return EXIT_FAILURE;
+    while (true) {
+        socklen_t client_len = sizeof(client);
+        if ((clientfd=accept(serverfd,
+                             (struct sockaddr *) &client, &client_len )) == -1) {
+            perror("Accept error:");
+            return EXIT_FAILURE;
+        }
+
+        /* Copies into buffer our welcome messaage */
+        strcpy(buffer, "Hello, client!\n\0");
+
+
+        /* Sends the message to the client */
+        if (send(clientfd, buffer, strlen(buffer), 0)) {
+            fprintf(stdout, "Client connected.\nWaiting for client message ...\n");
+
+            /* Communicates with the client until bye message come */
+            do {
+
+                /* Zeroing buffers */
+                memset(buffer, 0x0, BUFFER_LENGTH);
+
+                /* Receives client message */
+                int message_len;
+                if((message_len = recv(clientfd, buffer, BUFFER_LENGTH, 0)) > 0) {
+                    buffer[message_len - 1] = '\0';
+                    printf("Client says: %s\n", buffer);
+                }
+
+
+                /* 'bye' message finishes the connection */
+                if(strcmp(buffer, "bye") == 0) {
+                    send(clientfd, "bye", 3, 0);
+                } else {
+                    send(clientfd, "yep\n", 4, 0);
+                }
+
+            } while(strcmp(buffer, "bye"));
+        }
+
+        /* Client connection Close */
+        close(clientfd);
     }
-
-
-    /* Copies into buffer our welcome messaage */
-    strcpy(buffer, "Hello, client!\n\0");
-
-
-    /* Sends the message to the client */
-    if (send(clientfd, buffer, strlen(buffer), 0)) {
-        fprintf(stdout, "Client connected.\nWaiting for client message ...\n");
-
-        /* Communicates with the client until bye message come */
-        do {
-
-            /* Zeroing buffers */
-            memset(buffer, 0x0, BUFFER_LENGTH);
-
-            /* Receives client message */
-            int message_len;
-            if((message_len = recv(clientfd, buffer, BUFFER_LENGTH, 0)) > 0) {
-                buffer[message_len - 1] = '\0';
-                printf("Client says: %s\n", buffer);
-            }
-
-
-            /* 'bye' message finishes the connection */
-            if(strcmp(buffer, "bye") == 0) {
-                send(clientfd, "bye", 3, 0);
-            } else {
-                send(clientfd, "yep\n", 4, 0);
-            }
-
-        } while(strcmp(buffer, "bye"));
-    }
-
-    /* Client connection Close */
-    close(clientfd);
 
     /* Close the local socket */
     close(serverfd);
