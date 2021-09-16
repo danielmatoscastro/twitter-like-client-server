@@ -2,9 +2,11 @@
 /server/cmake-build-debug/
 /cmake_install.cmake
 /CMakeCache.txt
-/Makefile
 /CMakeFiles/
 /client/client_output/
 /server/CMakeFiles/
 /server/server_output/
 /server/CMakeCache.txt
+**/*.o
+server/server
+client/client
