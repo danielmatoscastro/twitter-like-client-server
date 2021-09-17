@@ -38,17 +38,30 @@ bool Connection::is_closed()
 
 void Connection::send_message(const char *msg)
 {
-    memset(buffer_out, 0x0, LEN);
-    memcpy(buffer_out, msg, LEN);
+    memset(buffer_out, 0x0, PACKET_BUFFER_LEN);
+    memcpy(buffer_out, msg, PACKET_BUFFER_LEN);
 
-    send(sockfd, buffer_out, LEN, 0);
+    send(sockfd, buffer_out, PACKET_BUFFER_LEN, 0);
 }
 
 char *Connection::receive_message()
 {
-    memset(buffer_in, 0x0, LEN);
-    recv(sockfd, buffer_in, LEN, 0);
+    memset(buffer_in, 0x0, PACKET_BUFFER_LEN);
+    recv(sockfd, buffer_in, PACKET_BUFFER_LEN, 0);
     return buffer_in;
+}
+
+void Connection::sendPacket(Packet *packet)
+{
+    char *buffer_temp = packet->toBytes();
+    this->send_message(buffer_temp);
+}
+Packet *Connection::receivePacket()
+{
+    char *buffer_temp = this->receive_message();
+    Packet *packet = new Packet();
+    packet->fromBytes(buffer_temp);
+    return packet;
 }
 
 void Connection::close()

@@ -11,6 +11,8 @@ pthread_t from_server_th;
 
 void interruption_handler(sig_atomic_t sigAtomic)
 {
+    Packet *packet = new Packet(CmdType::CLOSE_CONN, 0);
+    con->sendPacket(packet);
     con->close();
     exit(EXIT_SUCCESS);
 }
@@ -23,9 +25,8 @@ void *to_server(void *args)
     {
         if (!con->is_closed())
         {
-            Packet *packet = new Packet(PacketType::DATA, 1, line);
-            cout << "Payload: " << packet->getPayload() << endl;
-            con->send_message(packet->toBytes());
+            Packet *packet = new Packet(1, line);
+            con->sendPacket(packet);
             getline(cin, line);
         }
         else
@@ -42,10 +43,17 @@ void *from_server(void *args)
 {
     while (!con->is_closed())
     {
-        cout << con->receive_message();
+        Packet *packet = con->receivePacket();
+        cout << packet->getPayload() << endl;
     }
 
     pthread_exit(NULL);
+}
+
+void send_presentation(char *profile)
+{
+    Packet *packet = new Packet(CmdType::PROFILE, 0, profile);
+    con->sendPacket(packet);
 }
 
 int main(int argc, char *argv[])
@@ -63,25 +71,13 @@ int main(int argc, char *argv[])
 
     signal(SIGINT, interruption_handler);
 
-    std::string presentation = "PROFILE " + string(profile);
-    Packet *packet = new Packet(PacketType::CMD, 1, presentation);
-    con->send_message(packet->toBytes());
+    send_presentation(profile);
 
     pthread_create(&to_server_th, NULL, to_server, NULL);
     pthread_create(&from_server_th, NULL, from_server, NULL);
 
     pthread_join(to_server_th, NULL);
     pthread_join(from_server_th, NULL);
-
-    // Packet *packet = new Packet(PacketType::DATA, 70, "Ola, este eh um teste legal.");
-    // Packet *packet_2 = new Packet();
-
-    // char *bytes = packet->toBytes();
-    // packet_2->fromBytes(bytes);
-
-    // cout << packet_2->type << endl;
-    // cout << packet_2->sequence << endl;
-    // cout << packet_2->payload << endl;
 
     return EXIT_SUCCESS;
 }

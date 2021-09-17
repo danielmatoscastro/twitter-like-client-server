@@ -25,11 +25,11 @@ void *func(void *_clientfd)
 {
     int clientfd = *((int *)_clientfd);
     char buffer[BUFFER_LENGTH];
-    /* Copies into buffer our welcome messaage */
-    strcpy(buffer, "Hello, client!\n\0");
+
+    Packet *hello = new Packet(1, "Hello client!");
 
     /* Sends the message to the client */
-    if (send(clientfd, buffer, strlen(buffer), 0))
+    if (send(clientfd, hello->toBytes(), PACKET_BUFFER_LEN, 0))
     {
         fprintf(stdout, "Client connected.\nWaiting for client message ...\n");
 
@@ -51,7 +51,8 @@ void *func(void *_clientfd)
                 cout << "Client says: " << packet->getPayload() << endl;
             }
 
-            send(clientfd, "yep\n", 4, 0);
+            Packet *yep = new Packet(1, "Yep!");
+            send(clientfd, yep->toBytes(), PACKET_BUFFER_LEN, 0);
 
         } while (true);
     }

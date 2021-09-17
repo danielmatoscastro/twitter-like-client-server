@@ -13,29 +13,31 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
+#include "../commons/Packet.h"
+
 #ifndef TWITTER_CONNECTION_H
 #define TWITTER_CONNECTION_H
 
-/* Sockets buffers length */
-#define LEN 4096
-
 using namespace std;
 
-class Connection {
+class Connection
+{
 public:
     Connection(uint16_t port, const char *server_addr);
-    void send_message(const char * msg);
-    char * receive_message();
     void close();
     bool is_closed();
+    void sendPacket(Packet *packet);
+    Packet *receivePacket();
+
 private:
     struct sockaddr_in server;
     int sockfd;
     int len = sizeof(server);
-    char buffer_in[LEN];
-    char buffer_out[LEN];
+    char buffer_in[PACKET_BUFFER_LEN];
+    char buffer_out[PACKET_BUFFER_LEN];
     bool closed;
+    void send_message(const char *msg);
+    char *receive_message();
 };
-
 
 #endif //TWITTER_CONNECTION_H
