@@ -9,7 +9,6 @@
 #include <netinet/in.h>
 #include <netdb.h>
 #include <pthread.h>
-#include <vector>
 #include <iostream>
 #include "../commons/Packet.h"
 #include "Server.h"
@@ -24,7 +23,7 @@ void *from_client(void *_conn)
 {
     ClientConnection *conn = (ClientConnection *)_conn;
 
-    Packet *hello = new Packet(1, "Hello client!");
+    Packet *hello = new Packet("Hello client!");
     conn->sendPacket(hello);
 
     cout << "Client connected." << endl
@@ -35,16 +34,15 @@ void *from_client(void *_conn)
         Packet *packet = conn->receivePacket();
         cout << "Client says: " << packet->getPayload() << endl;
 
-        Packet *yep = new Packet(1, "Yep!");
+        Packet *yep = new Packet("Yep!");
         conn->sendPacket(yep);
     } while (true);
 
     conn->close();
 }
 
-int main(void)
+int main()
 {
-    vector<pthread_t *> *threads = new vector<pthread_t *>();
     Server *server = new Server(PORT);
 
     while (true)
@@ -52,7 +50,6 @@ int main(void)
         ClientConnection *conn = server->waitClient();
 
         pthread_t *th = new pthread_t();
-        threads->push_back(th);
         if (pthread_create(th, NULL, from_client, conn) != 0)
         {
             perror("pthread_create error:");

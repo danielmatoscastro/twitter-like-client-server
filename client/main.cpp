@@ -11,7 +11,7 @@ pthread_t from_server_th;
 
 void interruption_handler(sig_atomic_t sigAtomic)
 {
-    Packet *packet = new Packet(CmdType::CLOSE_CONN, 0);
+    Packet *packet = new Packet(CmdType::CLOSE_CONN);
     con->sendPacket(packet);
     con->close();
     exit(EXIT_SUCCESS);
@@ -25,7 +25,7 @@ void *to_server(void *args)
     {
         if (!con->is_closed())
         {
-            Packet *packet = new Packet(1, line);
+            Packet *packet = new Packet(line);
             con->sendPacket(packet);
             getline(cin, line);
         }
@@ -52,7 +52,7 @@ void *from_server(void *args)
 
 void send_presentation(char *profile)
 {
-    Packet *packet = new Packet(CmdType::PROFILE, 0, profile);
+    Packet *packet = new Packet(CmdType::PROFILE, profile);
     con->sendPacket(packet);
 }
 

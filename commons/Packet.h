@@ -1,9 +1,10 @@
-#include <string>
-
 #ifndef TWITTER_PACKET_H
 #define TWITTER_PACKET_H
 
+#include <string>
+
 #define PACKET_BUFFER_LEN 4096
+
 using namespace std;
 
 enum PacketType
@@ -22,22 +23,20 @@ class Packet
 {
 public:
     Packet();
-    Packet(PacketType type, uint16_t sequence, string payload);
-    Packet(uint16_t sequence, string payload);
-    Packet(CmdType cmd, uint16_t sequence);
-    Packet(CmdType cmd, uint16_t sequence, string payload);
+    Packet(PacketType type, string payload);
+    Packet(string payload);
+    Packet(CmdType cmd);
+    Packet(CmdType cmd, string payload);
     char *toBytes();
     void fromBytes(char *buffer);
     PacketType getType();
     CmdType getCmd();
-    uint16_t getSequence();
     string getPayload();
     uint32_t getTimestamp();
 
 private:
     PacketType type;
     CmdType cmd;
-    uint16_t sequence;
     string payload;
     uint32_t timestamp;
 };

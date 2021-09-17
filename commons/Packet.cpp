@@ -11,37 +11,26 @@ Packet::Packet()
 {
 }
 
-Packet::Packet(PacketType type, uint16_t sequence, string payload)
-{
-    this->type = type;
-    this->sequence = sequence;
-    this->payload = payload;
-    this->timestamp = time(nullptr);
-}
-
-Packet::Packet(uint16_t sequence, string payload)
+Packet::Packet(string payload)
 {
     this->type = PacketType::DATA;
     this->cmd = (CmdType)0;
-    this->sequence = sequence;
     this->payload = payload;
     this->timestamp = time(nullptr);
 }
 
-Packet::Packet(CmdType cmd, uint16_t sequence)
+Packet::Packet(CmdType cmd)
 {
     this->type = PacketType::CMD;
     this->cmd = cmd;
-    this->sequence = sequence;
     this->payload = "";
     this->timestamp = time(nullptr);
 }
 
-Packet::Packet(CmdType cmd, uint16_t sequence, string payload)
+Packet::Packet(CmdType cmd, string payload)
 {
     this->type = PacketType::CMD;
     this->cmd = cmd;
-    this->sequence = sequence;
     this->payload = payload;
     this->timestamp = time(nullptr);
 }
@@ -56,9 +45,6 @@ char *Packet::toBytes()
 
     buffer[pos] = (char)this->cmd;
     pos += sizeof(char);
-
-    memcpy(&buffer[pos], &(this->sequence), sizeof(this->sequence));
-    pos += sizeof(this->sequence);
 
     memcpy(&buffer[pos], &(this->timestamp), sizeof(this->timestamp));
     pos += sizeof(this->timestamp);
@@ -86,10 +72,6 @@ void Packet::fromBytes(char *buffer)
     pos += sizeof(char);
     //cout << this->cmd << endl;
 
-    memcpy(&(this->sequence), &buffer[pos], sizeof(this->sequence));
-    pos += sizeof(this->sequence);
-    //cout << this->sequence << endl;
-
     memcpy(&(this->timestamp), &buffer[pos], sizeof(this->timestamp));
     pos += sizeof(this->timestamp);
     //cout << this->timestamp << endl;
@@ -115,10 +97,6 @@ CmdType Packet::getCmd()
     return this->cmd;
 }
 
-uint16_t Packet::getSequence()
-{
-    return this->sequence;
-}
 string Packet::getPayload()
 {
     return this->payload;
