@@ -71,3 +71,20 @@ void Packet::fromBytes(char *buffer)
     memcpy(payload_char, &buffer[pos], payload_size);
     this->payload = string(payload_char);
 }
+
+PacketType Packet::getType()
+{
+    return this->type;
+}
+uint16_t Packet::getSequence()
+{
+    return this->sequence;
+}
+string Packet::getPayload()
+{
+    return this->payload;
+}
+uint32_t Packet::getTimestamp()
+{
+    return this->timestamp;
+}
