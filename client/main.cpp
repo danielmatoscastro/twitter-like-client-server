@@ -3,6 +3,7 @@
 #include <signal.h>
 #include <pthread.h>
 #include "Connection.h"
+#include "../commons/Packet.h"
 
 Connection *con;
 pthread_t to_server_th;
@@ -67,6 +68,17 @@ int main(int argc, char *argv[])
     pthread_create(&from_server_th, NULL, from_server, NULL);
 
     pthread_join(to_server_th, NULL);
+    pthread_join(from_server_th, NULL);
+
+    // Packet *packet = new Packet(PacketType::DATA, 70, "Ola, este eh um teste legal.");
+    // Packet *packet_2 = new Packet();
+
+    // char *bytes = packet->toBytes();
+    // packet_2->fromBytes(bytes);
+
+    // cout << packet_2->type << endl;
+    // cout << packet_2->sequence << endl;
+    // cout << packet_2->payload << endl;
 
     return EXIT_SUCCESS;
 }
