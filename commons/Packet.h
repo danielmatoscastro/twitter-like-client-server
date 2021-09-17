@@ -2,6 +2,8 @@
 
 #ifndef TWITTER_PACKET_H
 #define TWITTER_PACKET_H
+
+#define PACKET_BUFFER_LEN 4096
 using namespace std;
 
 enum PacketType

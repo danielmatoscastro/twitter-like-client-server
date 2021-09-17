@@ -17,14 +17,16 @@ void interruption_handler(sig_atomic_t sigAtomic)
 
 void *to_server(void *args)
 {
-    std::string line;
-    std::getline(std::cin, line);
+    string line;
+    getline(cin, line);
     while (!cin.eof())
     {
         if (!con->is_closed())
         {
-            con->send_message(line.c_str());
-            std::getline(std::cin, line);
+            Packet *packet = new Packet(PacketType::DATA, 1, line);
+            cout << "Payload: " << packet->getPayload() << endl;
+            con->send_message(packet->toBytes());
+            getline(cin, line);
         }
         else
         {
@@ -62,7 +64,8 @@ int main(int argc, char *argv[])
     signal(SIGINT, interruption_handler);
 
     std::string presentation = "PROFILE " + string(profile);
-    con->send_message(presentation.c_str());
+    Packet *packet = new Packet(PacketType::CMD, 1, presentation);
+    con->send_message(packet->toBytes());
 
     pthread_create(&to_server_th, NULL, to_server, NULL);
     pthread_create(&from_server_th, NULL, from_server, NULL);

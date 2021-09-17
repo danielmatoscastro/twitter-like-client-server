@@ -10,6 +10,8 @@
 #include <netdb.h>
 #include <pthread.h>
 #include <list>
+#include <iostream>
+#include "../commons/Packet.h"
 
 /* Server port  */
 #define PORT 4242
@@ -31,10 +33,11 @@ void *func(void *_clientfd)
     {
         fprintf(stdout, "Client connected.\nWaiting for client message ...\n");
 
+        Packet *packet;
+
         /* Communicates with the client until bye message come */
         do
         {
-
             /* Zeroing buffers */
             memset(buffer, 0x0, BUFFER_LENGTH);
 
@@ -42,21 +45,15 @@ void *func(void *_clientfd)
             int message_len;
             if ((message_len = recv(clientfd, buffer, BUFFER_LENGTH, 0)) > 0)
             {
-                buffer[message_len - 1] = '\0';
-                printf("Client says: %s\n", buffer);
+                packet = new Packet();
+                packet->fromBytes(buffer);
+                //buffer[message_len - 1] = '\0';
+                cout << "Client says: " << packet->getPayload() << endl;
             }
 
-            /* 'bye' message finishes the connection */
-            if (strcmp(buffer, "bye") == 0)
-            {
-                send(clientfd, "bye", 3, 0);
-            }
-            else
-            {
-                send(clientfd, "yep\n", 4, 0);
-            }
+            send(clientfd, "yep\n", 4, 0);
 
-        } while (strcmp(buffer, "bye"));
+        } while (true);
     }
 
     /* Client connection Close */

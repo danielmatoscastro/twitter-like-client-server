@@ -1,6 +1,7 @@
 #include <cstring>
 #include <string>
 #include <ctime>
+#include <iostream>
 
 using namespace std;
 
@@ -20,7 +21,7 @@ Packet::Packet(PacketType type, uint16_t sequence, string payload)
 
 char *Packet::toBytes()
 {
-    char *buffer = new char[4096];
+    char *buffer = new char[PACKET_BUFFER_LEN];
     int pos = 0;
 
     if (this->type == PacketType::DATA)
@@ -56,20 +57,25 @@ void Packet::fromBytes(char *buffer)
 
     this->type = (PacketType)buffer[pos];
     pos += 1;
+    cout << this->type << endl;
 
     memcpy(&(this->sequence), &buffer[pos], sizeof(this->sequence));
     pos += sizeof(this->sequence);
+    cout << this->sequence << endl;
 
     memcpy(&(this->timestamp), &buffer[pos], sizeof(this->timestamp));
     pos += sizeof(this->timestamp);
+    cout << this->timestamp << endl;
 
     size_t payload_size;
     memcpy(&payload_size, &buffer[pos], sizeof(size_t));
     pos += sizeof(payload_size);
+    cout << payload_size << endl;
 
     char *payload_char = new char[payload_size + 1];
     memcpy(payload_char, &buffer[pos], payload_size);
     this->payload = string(payload_char);
+    cout << this->payload << endl;
 }
 
 PacketType Packet::getType()
