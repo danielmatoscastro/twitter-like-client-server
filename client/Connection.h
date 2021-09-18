@@ -25,7 +25,7 @@ class Connection
 public:
     Connection(uint16_t port, const char *server_addr);
     void close();
-    bool is_closed();
+    bool isClosed();
     void sendPacket(Packet *packet);
     Packet *receivePacket();
 
@@ -36,8 +36,8 @@ private:
     char buffer_in[PACKET_BUFFER_LEN];
     char buffer_out[PACKET_BUFFER_LEN];
     bool closed;
-    void send_message(const char *msg);
-    char *receive_message();
+    void sendMessage(const char *msg);
+    char *receiveMessage();
 };
 
 #endif //TWITTER_CONNECTION_H

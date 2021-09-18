@@ -18,16 +18,16 @@ ClientConnection::ClientConnection(int clientfd)
     this->clientfd = clientfd;
 }
 
-void ClientConnection::send_message(const char *msg)
+void ClientConnection::sendMessage(const char *msg)
 {
     char *buffer_out = new char[PACKET_BUFFER_LEN];
-    memset(buffer_out, 0x0, PACKET_BUFFER_LEN);
+    memset(buffer_out, 0, PACKET_BUFFER_LEN);
     memcpy(buffer_out, msg, PACKET_BUFFER_LEN);
 
     send(this->clientfd, buffer_out, PACKET_BUFFER_LEN, 0);
 }
 
-char *ClientConnection::receive_message()
+char *ClientConnection::receiveMessage()
 {
     char *buffer_in = new char[PACKET_BUFFER_LEN];
     memset(buffer_in, 0x0, PACKET_BUFFER_LEN);
@@ -38,12 +38,12 @@ char *ClientConnection::receive_message()
 void ClientConnection::sendPacket(Packet *packet)
 {
     char *buffer_temp = packet->toBytes();
-    this->send_message(buffer_temp);
+    this->sendMessage(buffer_temp);
 }
 
 Packet *ClientConnection::receivePacket()
 {
-    char *buffer_temp = this->receive_message();
+    char *buffer_temp = this->receiveMessage();
     Packet *packet = new Packet();
     packet->fromBytes(buffer_temp);
     return packet;

@@ -26,14 +26,12 @@ Server::Server(uint16_t port)
     }
     cout << "Server on." << endl;
 
-    /* Server socket structures */
     struct sockaddr_in server;
-    /* Defines the server socket properties */
     server.sin_family = AF_INET;
     server.sin_port = htons(port);
+    server.sin_addr.s_addr = INADDR_ANY;
     memset(server.sin_zero, 0, 8);
 
-    /* Handle the error of the port already in use */
     int yes = 1;
     if (setsockopt(this->serverfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1)
     {
@@ -41,15 +39,13 @@ Server::Server(uint16_t port)
         exit(EXIT_FAILURE);
     }
 
-    /* bind the socket to a port */
     if (bind(this->serverfd, (struct sockaddr *)&server, sizeof(server)) == -1)
     {
         perror("Socket bind error:");
         exit(EXIT_FAILURE);
     }
 
-    /* Starts to wait connections from clients */
-    if (listen(this->serverfd, 1) == -1)
+    if (listen(this->serverfd, BACKLOG_SIZE) == -1)
     {
         perror("Listen error:");
         exit(EXIT_FAILURE);

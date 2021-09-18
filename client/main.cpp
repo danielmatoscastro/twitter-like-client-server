@@ -23,7 +23,7 @@ void *to_server(void *args)
     getline(cin, line);
     while (!cin.eof())
     {
-        if (!con->is_closed())
+        if (!con->isClosed())
         {
             Packet *packet = new Packet(line);
             con->sendPacket(packet);
@@ -41,7 +41,7 @@ void *to_server(void *args)
 
 void *from_server(void *args)
 {
-    while (!con->is_closed())
+    while (!con->isClosed())
     {
         Packet *packet = con->receivePacket();
         cout << packet->getPayload() << endl;

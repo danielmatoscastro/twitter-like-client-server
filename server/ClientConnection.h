@@ -16,8 +16,8 @@ public:
 
 private:
     int clientfd;
-    void send_message(const char *msg);
-    char *receive_message();
+    void sendMessage(const char *msg);
+    char *receiveMessage();
 };
 
 #endif

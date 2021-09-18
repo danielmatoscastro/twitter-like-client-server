@@ -1,6 +1,8 @@
 #ifndef TWITTER_SERVER_H
 #define TWITTER_SERVER_H
 
+#define BACKLOG_SIZE 100
+
 #include "ClientConnection.h"
 
 using namespace std;
