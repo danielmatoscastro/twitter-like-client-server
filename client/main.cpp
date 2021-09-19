@@ -33,7 +33,7 @@ void *to_server(void *args)
             }
             else if (line.rfind("SEND") == 0)
             {
-                packet = new Packet(line.substr(5));
+                packet = new Packet(CmdType::SEND, line.substr(5));
             }
             else
             {

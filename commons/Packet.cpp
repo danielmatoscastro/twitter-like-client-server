@@ -13,15 +13,13 @@ Packet::Packet()
 
 Packet::Packet(string payload)
 {
-    this->type = PacketType::DATA;
-    this->cmd = (CmdType)0;
+    this->cmd = CmdType::SEND;
     this->payload = payload;
     this->timestamp = time(nullptr);
 }
 
 Packet::Packet(CmdType cmd)
 {
-    this->type = PacketType::CMD;
     this->cmd = cmd;
     this->payload = "";
     this->timestamp = time(nullptr);
@@ -29,7 +27,6 @@ Packet::Packet(CmdType cmd)
 
 Packet::Packet(CmdType cmd, string payload)
 {
-    this->type = PacketType::CMD;
     this->cmd = cmd;
     this->payload = payload;
     this->timestamp = time(nullptr);
@@ -39,9 +36,6 @@ char *Packet::toBytes()
 {
     char *buffer = new char[PACKET_BUFFER_LEN];
     int pos = 0;
-
-    buffer[pos] = (char)this->type;
-    pos += sizeof(char);
 
     buffer[pos] = (char)this->cmd;
     pos += sizeof(char);
@@ -64,10 +58,6 @@ void Packet::fromBytes(char *buffer)
 {
     int pos = 0;
 
-    this->type = (PacketType)buffer[pos];
-    pos += sizeof(char);
-    //cout << this->type << endl;
-
     this->cmd = (CmdType)buffer[pos];
     pos += sizeof(char);
     //cout << this->cmd << endl;
@@ -85,11 +75,6 @@ void Packet::fromBytes(char *buffer)
     memcpy(payload_char, &buffer[pos], payload_size);
     this->payload = string(payload_char);
     //cout << this->payload << endl;
-}
-
-PacketType Packet::getType()
-{
-    return this->type;
 }
 
 CmdType Packet::getCmd()

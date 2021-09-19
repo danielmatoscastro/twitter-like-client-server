@@ -10,3 +10,4 @@
 **/*.o
 server/server
 client/client
+.vscode

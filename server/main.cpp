@@ -68,7 +68,7 @@ void *from_client(void *_conn)
 
     Profile *profile = receiveProfileCmd(conn);
 
-    Packet *hello = new Packet("Hello client! " + profile->getProfileId());
+    Packet *hello = new Packet(CmdType::SEND, "Hello client! " + profile->getProfileId());
     conn->sendPacket(hello);
 
     cout << "Client " << profile->getProfileId() << " connected." << endl
@@ -81,9 +81,9 @@ void *from_client(void *_conn)
         if (packet->getCmd() == CmdType::FOLLOW)
         {
             cout << profile->getProfileId() << " wants to follow " << packet->getPayload() << endl;
-            
+
             bool isInMap = profiles->count(packet->getPayload()) > 0;
-            if(isInMap)
+            if (isInMap)
             {
                 Profile *profileToFollow = profiles->find(packet->getPayload())->second;
                 profileToFollow->addFollower(profile);
@@ -91,20 +91,25 @@ void *from_client(void *_conn)
         }
         else if (packet->getCmd() == CmdType::CLOSE_CONN)
         {
-            // concorrencia!! 
+            // concorrencia!!
             // decrease sessionsOn and remove Profile
-            if(profile->getSessionsOn() > 0){
+            if (profile->getSessionsOn() > 0)
+            {
                 profile->decSessionsOn();
                 cout << "Decrementou" << endl;
             }
             break;
         }
-        else
+        else if (packet->getCmd() == CmdType::SEND)
         {
             cout << profile->getProfileId() << " says: " << packet->getPayload() << endl;
         }
+        else
+        {
+            cout << "I dont know..." << endl;
+        }
 
-        Packet *yep = new Packet("Yep!");
+        Packet *yep = new Packet(CmdType::SEND, "Yep!");
         conn->sendPacket(yep);
     } while (true);
 
