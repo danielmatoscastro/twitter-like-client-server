@@ -1,4 +1,5 @@
 #include "Profile.h"
+#include <iostream>
 
 using namespace std;
 
@@ -39,4 +40,23 @@ vector<Packet *> *Profile::getInbox()
 void Profile::incSessionsOn()
 {
     this->sessions_on++;
+}
+
+void Profile::decSessionsOn(){
+    this->sessions_on--;
+}
+
+void Profile::addFollower(Profile *follower)
+{
+    cout << "It begins now!" << endl;
+    for (auto p : *followers)
+    {   cout << "entrou no for" << endl;
+        if(follower->getProfileId() == p->getProfileId()){
+            cout << "follower ja existe" << endl;
+            return;
+        }
+    }
+    cout << "Will add follower " << follower->getProfileId() << endl;
+
+    this->followers->push_back(follower);
 }

@@ -81,10 +81,22 @@ void *from_client(void *_conn)
         if (packet->getCmd() == CmdType::FOLLOW)
         {
             cout << profile->getProfileId() << " wants to follow " << packet->getPayload() << endl;
+            
+            bool isInMap = profiles->count(packet->getPayload()) > 0;
+            if(isInMap)
+            {
+                Profile *profileToFollow = profiles->find(packet->getPayload())->second;
+                profileToFollow->addFollower(profile);
+            }
         }
         else if (packet->getCmd() == CmdType::CLOSE_CONN)
         {
+            // concorrencia!! 
             // decrease sessionsOn and remove Profile
+            if(profile->getSessionsOn() > 0){
+                profile->decSessionsOn();
+                cout << "Decrementou" << endl;
+            }
             break;
         }
         else

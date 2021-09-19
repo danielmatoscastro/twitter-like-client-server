@@ -17,6 +17,8 @@ public:
     vector<Profile *> *getFollowers();
     vector<Packet *> *getInbox();
     void incSessionsOn();
+    void decSessionsOn();
+    void addFollower(Profile *follower);
 
 private:
     string profile_id;
