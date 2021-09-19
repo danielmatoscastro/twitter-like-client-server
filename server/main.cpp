@@ -74,11 +74,14 @@ void *from_client(void *_conn)
     cout << "Client " << profile->getProfileId() << " connected." << endl
          << "Waiting for client message ..." << endl;
 
-    do
+    bool clientWantsToQuit = false;
+    while (!clientWantsToQuit)
     {
         Packet *packet = conn->receivePacket();
 
-        if (packet->getCmd() == CmdType::FOLLOW)
+        switch (packet->getCmd())
+        {
+        case CmdType::FOLLOW:
         {
             cout << profile->getProfileId() << " wants to follow " << packet->getPayload() << endl;
 
@@ -88,8 +91,9 @@ void *from_client(void *_conn)
                 Profile *profileToFollow = profiles->find(packet->getPayload())->second;
                 profileToFollow->addFollower(profile);
             }
+            break;
         }
-        else if (packet->getCmd() == CmdType::CLOSE_CONN)
+        case CmdType::CLOSE_CONN:
         {
             // concorrencia!!
             // decrease sessionsOn and remove Profile
@@ -98,20 +102,24 @@ void *from_client(void *_conn)
                 profile->decSessionsOn();
                 cout << "Decrementou" << endl;
             }
+            clientWantsToQuit = true;
             break;
         }
-        else if (packet->getCmd() == CmdType::SEND)
+        case CmdType::SEND:
         {
             cout << profile->getProfileId() << " says: " << packet->getPayload() << endl;
+            break;
         }
-        else
+        default:
         {
             cout << "I dont know..." << endl;
+            break;
+        }
         }
 
         Packet *yep = new Packet(CmdType::SEND, "Yep!");
         conn->sendPacket(yep);
-    } while (true);
+    }
 
     conn->close();
     pthread_exit(nullptr);
