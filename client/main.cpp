@@ -20,14 +20,28 @@ void interruption_handler(sig_atomic_t sigAtomic)
 void *to_server(void *args)
 {
     string line;
-    getline(cin, line);
+
     while (!cin.eof())
     {
+        getline(cin, line);
         if (!con->isClosed())
         {
-            Packet *packet = new Packet(line);
+            Packet *packet;
+            if (line.rfind("FOLLOW") == 0)
+            {
+                packet = new Packet(CmdType::FOLLOW, line.substr(7));
+            }
+            else if (line.rfind("SEND") == 0)
+            {
+                packet = new Packet(line.substr(5));
+            }
+            else
+            {
+                cout << "Sorry, wrong command..." << endl;
+                continue;
+            }
+
             con->sendPacket(packet);
-            getline(cin, line);
         }
         else
         {
@@ -44,7 +58,16 @@ void *from_server(void *args)
     while (!con->isClosed())
     {
         Packet *packet = con->receivePacket();
-        cout << packet->getPayload() << endl;
+        if (packet->getCmd() == CmdType::CLOSE_CONN)
+        {
+            con->close();
+            cout << "Server sent CLOSE_CONN" << endl;
+            exit(EXIT_SUCCESS);
+        }
+        else
+        {
+            cout << packet->getPayload() << endl;
+        }
     }
 
     pthread_exit(NULL);

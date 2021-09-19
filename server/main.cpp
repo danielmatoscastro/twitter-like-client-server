@@ -13,36 +13,96 @@
 #include "../commons/Packet.h"
 #include "Server.h"
 #include "ClientConnection.h"
+#include <map>
+#include "Profile.h"
 
-/* Server port  */
 #define PORT 4242
+#define MAX_SESSIONS 2
 
 using namespace std;
+
+map<string, Profile *> *profiles;
+
+Profile *receiveProfileCmd(ClientConnection *conn)
+{
+    Profile *profile;
+    Packet *toClient;
+    Packet *packet = conn->receivePacket();
+    if (packet->getCmd() != CmdType::PROFILE)
+    {
+        cout << "Vai morrer again bro" << endl;
+        toClient = new Packet(CmdType::CLOSE_CONN);
+        conn->sendPacket(toClient);
+        conn->close();
+        pthread_exit(nullptr);
+    }
+
+    bool isInMap = profiles->count(packet->getPayload()) > 0;
+    if (isInMap)
+    {
+        profile = profiles->find(packet->getPayload())->second;
+        if (profile->getSessionsOn() == MAX_SESSIONS)
+        {
+            cout << "Vai morrer bro" << endl;
+            toClient = new Packet(CmdType::CLOSE_CONN);
+            conn->sendPacket(toClient);
+            conn->close();
+            pthread_exit(nullptr);
+        }
+
+        profile->incSessionsOn();
+    }
+    else
+    {
+        profile = new Profile(packet->getPayload());
+        profiles->insert(make_pair(packet->getPayload(), profile));
+        cout << "PROFILE " << packet->getPayload() << " has been planted" << endl;
+    }
+
+    return profile;
+}
 
 void *from_client(void *_conn)
 {
     ClientConnection *conn = (ClientConnection *)_conn;
 
-    Packet *hello = new Packet("Hello client!");
+    Profile *profile = receiveProfileCmd(conn);
+
+    Packet *hello = new Packet("Hello client! " + profile->getProfileId());
     conn->sendPacket(hello);
 
-    cout << "Client connected." << endl
+    cout << "Client " << profile->getProfileId() << " connected." << endl
          << "Waiting for client message ..." << endl;
 
     do
     {
         Packet *packet = conn->receivePacket();
-        cout << "Client says: " << packet->getPayload() << endl;
+
+        if (packet->getCmd() == CmdType::FOLLOW)
+        {
+            cout << profile->getProfileId() << " wants to follow " << packet->getPayload() << endl;
+        }
+        else if (packet->getCmd() == CmdType::CLOSE_CONN)
+        {
+            // decrease sessionsOn and remove Profile
+            break;
+        }
+        else
+        {
+            cout << profile->getProfileId() << " says: " << packet->getPayload() << endl;
+        }
 
         Packet *yep = new Packet("Yep!");
         conn->sendPacket(yep);
     } while (true);
 
     conn->close();
+    pthread_exit(nullptr);
 }
 
 int main()
 {
+    profiles = new map<string, Profile *>();
     Server *server = new Server(PORT);
 
     while (true)

@@ -16,7 +16,8 @@ enum PacketType
 enum CmdType
 {
     PROFILE = 1,
-    CLOSE_CONN = 2
+    CLOSE_CONN = 2,
+    FOLLOW = 3
 };
 
 class Packet
