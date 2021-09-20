@@ -42,9 +42,16 @@ bool ProfilesManager::hasProfile(string profileId)
 void ProfilesManager::addFollowerTo(string followed, Profile *follower)
 {
     Profile *profileToFollow = this->getProfileById(followed);
-    profileToFollow->getFollowers()->push_back(follower);
-
-    this->toJsonFile();
+    auto it = find_if(
+        profileToFollow->getFollowers()->begin(),
+        profileToFollow->getFollowers()->end(),
+        [&](Profile * p) {return p->getProfileId() == follower->getProfileId();}
+    );
+    
+    if (it == profileToFollow->getFollowers()->end()){
+        profileToFollow->getFollowers()->push_back(follower);
+        this->toJsonFile();
+    }
 }
 
 void ProfilesManager::toJsonFile()

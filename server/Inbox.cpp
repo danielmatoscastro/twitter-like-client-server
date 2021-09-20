@@ -1,3 +1,4 @@
+//Incluir mutex
 #include "Inbox.h"
 
 using namespace std;

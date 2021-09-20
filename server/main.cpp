@@ -1,3 +1,4 @@
+//
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -36,7 +37,8 @@ Profile *receiveProfileCmd(ClientConnection *conn)
         conn->close();
         pthread_exit(nullptr);
     }
-
+    
+    //Incluir mutex inicio
     if (profiles->hasProfile(packet->getPayload())) // if profile exists
     {
         profile = profiles->getProfileById(packet->getPayload());
@@ -55,7 +57,8 @@ Profile *receiveProfileCmd(ClientConnection *conn)
         profiles->insertProfile(packet->getPayload(), profile);
         cout << "PROFILE " << packet->getPayload() << " has been planted" << endl;
     }
-
+    //Incluir mutex fim
+    
     profile->incSessionsOn(conn);
 
     return profile;
