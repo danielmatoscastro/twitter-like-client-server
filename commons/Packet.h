@@ -22,16 +22,19 @@ public:
     Packet(string payload);
     Packet(CmdType cmd);
     Packet(CmdType cmd, string payload);
+    Packet(CmdType cmd, string payload, string sender);
     char *toBytes();
     void fromBytes(char *buffer);
     CmdType getCmd();
     string getPayload();
-    uint32_t getTimestamp();
+    string getSender();
+    time_t getTimestamp();
 
 private:
     CmdType cmd;
     string payload;
-    uint32_t timestamp;
+    time_t timestamp;
+    string sender;
 };
 
 #endif

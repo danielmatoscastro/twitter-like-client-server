@@ -1,4 +1,5 @@
 #include <iostream>
+#include <iomanip>
 #include <string>
 #include <signal.h>
 #include <pthread.h>
@@ -22,6 +23,7 @@ void interruption_handler(sig_atomic_t sigAtomic)
 void *to_server(void *args)
 {
     string line;
+    char * profile = (char *) args;
 
     while (!cin.eof())
     {
@@ -41,7 +43,7 @@ void *to_server(void *args)
                     cout << "Too long... max 128 chars." << endl;
                     continue;
                 }
-                packet = new Packet(CmdType::SEND, line.substr(5));
+                packet = new Packet(CmdType::SEND, line.substr(5), profile);
             }
             else
             {
@@ -73,8 +75,12 @@ void *from_server(void *args)
             exit(EXIT_SUCCESS);
         }
         else
-        {
-            cout << packet->getPayload() << endl;
+        {   
+            stringstream ss;
+            time_t time = packet->getTimestamp();
+            ss << put_time(localtime(&time), "%b %d %H:%M:%S %Y"); 
+            cout << packet->getSender() << ": " << packet->getPayload() << " at: "<<  ss.str() << endl;
+            // cout << packet->getPayload() << endl;
         }
     }
 
@@ -111,7 +117,7 @@ int main(int argc, char *argv[])
 
     send_presentation(profile);
 
-    pthread_create(&to_server_th, NULL, to_server, NULL);
+    pthread_create(&to_server_th, NULL, to_server, profile);
     pthread_create(&from_server_th, NULL, from_server, NULL);
 
     pthread_join(to_server_th, NULL);
