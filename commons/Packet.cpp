@@ -35,6 +35,7 @@ Packet::Packet(CmdType cmd, string payload)
 char *Packet::toBytes()
 {
     char *buffer = new char[PACKET_BUFFER_LEN];
+    memset(buffer, 0, PACKET_BUFFER_LEN);
     int pos = 0;
 
     buffer[pos] = (char)this->cmd;
@@ -43,7 +44,7 @@ char *Packet::toBytes()
     memcpy(&buffer[pos], &(this->timestamp), sizeof(this->timestamp));
     pos += sizeof(this->timestamp);
 
-    size_t payload_size = this->payload.length();
+    size_t payload_size = this->payload.size();
     memcpy(&buffer[pos], &payload_size, sizeof(payload_size));
     pos += sizeof(payload_size);
 
@@ -72,6 +73,7 @@ void Packet::fromBytes(char *buffer)
     //cout << payload_size << endl;
 
     char *payload_char = new char[payload_size + 1];
+    memset(payload_char, 0, payload_size + 1);
     memcpy(payload_char, &buffer[pos], payload_size);
     this->payload = string(payload_char);
     //cout << this->payload << endl;

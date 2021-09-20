@@ -13,15 +13,15 @@
 #include "../commons/Packet.h"
 #include "Server.h"
 #include "ClientConnection.h"
-#include <map>
 #include "Profile.h"
+#include "ProfilesManager.h"
 
 #define PORT 4242
 #define MAX_SESSIONS 2
 
 using namespace std;
 
-map<string, Profile *> *profiles;
+ProfilesManager *profiles;
 
 Profile *receiveProfileCmd(ClientConnection *conn)
 {
@@ -37,10 +37,9 @@ Profile *receiveProfileCmd(ClientConnection *conn)
         pthread_exit(nullptr);
     }
 
-    bool isInMap = profiles->count(packet->getPayload()) > 0;
-    if (isInMap)
+    if (profiles->hasProfile(packet->getPayload())) // if profile exists
     {
-        profile = profiles->find(packet->getPayload())->second;
+        profile = profiles->getProfileById(packet->getPayload());
         if (profile->getSessionsOn() == MAX_SESSIONS)
         {
             cout << "Vai morrer bro" << endl;
@@ -49,15 +48,15 @@ Profile *receiveProfileCmd(ClientConnection *conn)
             conn->close();
             pthread_exit(nullptr);
         }
-
-        profile->incSessionsOn();
     }
     else
     {
         profile = new Profile(packet->getPayload());
-        profiles->insert(make_pair(packet->getPayload(), profile));
+        profiles->insertProfile(packet->getPayload(), profile);
         cout << "PROFILE " << packet->getPayload() << " has been planted" << endl;
     }
+
+    profile->incSessionsOn(conn);
 
     return profile;
 }
@@ -65,11 +64,11 @@ Profile *receiveProfileCmd(ClientConnection *conn)
 void *from_client(void *_conn)
 {
     ClientConnection *conn = (ClientConnection *)_conn;
-
     Profile *profile = receiveProfileCmd(conn);
 
     Packet *hello = new Packet(CmdType::SEND, "Hello client! " + profile->getProfileId());
     conn->sendPacket(hello);
+    profile->fetchInboxContent();
 
     cout << "Client " << profile->getProfileId() << " connected." << endl
          << "Waiting for client message ..." << endl;
@@ -83,12 +82,17 @@ void *from_client(void *_conn)
         {
         case CmdType::FOLLOW:
         {
+            if (profile->getProfileId() == packet->getPayload())
+            {
+                cout << "vai dar nao mermao" << endl;
+                break;
+            }
+
             cout << profile->getProfileId() << " wants to follow " << packet->getPayload() << endl;
 
-            bool isInMap = profiles->count(packet->getPayload()) > 0;
-            if (isInMap)
+            if (profiles->hasProfile(packet->getPayload()))
             {
-                Profile *profileToFollow = profiles->find(packet->getPayload())->second;
+                Profile *profileToFollow = profiles->getProfileById(packet->getPayload());
                 profileToFollow->addFollower(profile);
             }
             break;
@@ -99,7 +103,7 @@ void *from_client(void *_conn)
             // decrease sessionsOn and remove Profile
             if (profile->getSessionsOn() > 0)
             {
-                profile->decSessionsOn();
+                profile->decSessionsOn(conn);
                 cout << "Decrementou" << endl;
             }
             clientWantsToQuit = true;
@@ -107,6 +111,12 @@ void *from_client(void *_conn)
         }
         case CmdType::SEND:
         {
+            for (int i = 0; i < profile->getFollowers()->size(); i++)
+            {
+                Profile *follower = profile->getFollowers()->at(i);
+                cout << "inserindo " << packet->getPayload() << " na inbox de " << follower->getProfileId() << endl;
+                follower->sendOrInsertInbox(packet);
+            }
             cout << profile->getProfileId() << " says: " << packet->getPayload() << endl;
             break;
         }
@@ -127,7 +137,7 @@ void *from_client(void *_conn)
 
 int main()
 {
-    profiles = new map<string, Profile *>();
+    profiles = new ProfilesManager();
     Server *server = new Server(PORT);
 
     while (true)

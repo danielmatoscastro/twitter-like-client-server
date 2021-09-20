@@ -4,6 +4,8 @@
 #include <string>
 #include <vector>
 #include "../commons/Packet.h"
+#include "ClientConnection.h"
+#include "Inbox.h"
 
 using namespace std;
 
@@ -15,17 +17,20 @@ public:
     vector<Packet *> *getMessages();
     int getSessionsOn();
     vector<Profile *> *getFollowers();
-    vector<Packet *> *getInbox();
-    void incSessionsOn();
-    void decSessionsOn();
+    Inbox *getInbox();
+    void incSessionsOn(ClientConnection *conn);
+    void decSessionsOn(ClientConnection *conn);
     void addFollower(Profile *follower);
+    void sendOrInsertInbox(Packet *packet);
+    void fetchInboxContent();
 
 private:
     string profile_id;
     vector<Packet *> *messages;
     int sessions_on;
     vector<Profile *> *followers;
-    vector<Packet *> *inbox;
+    Inbox *inbox;
+    vector<ClientConnection *> *sessions;
 };
 
 #endif

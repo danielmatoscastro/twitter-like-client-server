@@ -5,6 +5,8 @@
 #include "Connection.h"
 #include "../commons/Packet.h"
 
+#define MAX_MSG_LEN 128
+
 Connection *con;
 pthread_t to_server_th;
 pthread_t from_server_th;
@@ -33,6 +35,12 @@ void *to_server(void *args)
             }
             else if (line.rfind("SEND") == 0)
             {
+                string message = line.substr(5);
+                if (message.size() > MAX_MSG_LEN)
+                {
+                    cout << "Too long... max 128 chars." << endl;
+                    continue;
+                }
                 packet = new Packet(CmdType::SEND, line.substr(5));
             }
             else
@@ -83,13 +91,20 @@ int main(int argc, char *argv[])
 {
     if (argc < 4)
     {
-        perror("too few arguments\n");
+        cout << "too few arguments" << endl;
         exit(EXIT_FAILURE);
     }
 
     char *profile = argv[1];
     char *addr = argv[2];
     char *port = argv[3];
+
+    if (strlen(profile) < 5 || strlen(profile) > 21)
+    {
+        cout << "profile must have [4-20] chars." << endl;
+        exit(EXIT_FAILURE);
+    }
+
     con = new Connection(stoi(port), addr);
 
     signal(SIGINT, interruption_handler);

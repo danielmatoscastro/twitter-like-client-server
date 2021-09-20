@@ -1,5 +1,6 @@
 #include "Profile.h"
 #include <iostream>
+#include <algorithm>
 
 using namespace std;
 
@@ -7,9 +8,10 @@ Profile::Profile(string profile_id)
 {
     this->profile_id = profile_id;
     this->messages = new vector<Packet *>();
-    this->sessions_on = 1;
+    this->sessions_on = 0;
     this->followers = new vector<Profile *>();
-    this->inbox = new vector<Packet *>();
+    this->inbox = new Inbox();
+    this->sessions = new vector<ClientConnection *>();
 }
 
 string Profile::getProfileId()
@@ -32,26 +34,35 @@ vector<Profile *> *Profile::getFollowers()
     return this->followers;
 }
 
-vector<Packet *> *Profile::getInbox()
+Inbox *Profile::getInbox()
 {
     return this->inbox;
 }
 
-void Profile::incSessionsOn()
+void Profile::incSessionsOn(ClientConnection *conn)
 {
     this->sessions_on++;
+    this->sessions->push_back(conn);
+    cout << "Quantos tem? " << this->sessions->size() << endl;
 }
 
-void Profile::decSessionsOn(){
-    this->sessions_on--;
+void Profile::decSessionsOn(ClientConnection *conn)
+{
+
+    auto it = find(this->sessions->begin(), this->sessions->end(), conn);
+    if (it != this->sessions->end())
+    {
+        this->sessions->erase(it);
+        this->sessions_on--;
+    }
 }
 
 void Profile::addFollower(Profile *follower)
 {
-    cout << "It begins now!" << endl;
     for (auto p : *followers)
-    {   cout << "entrou no for" << endl;
-        if(follower->getProfileId() == p->getProfileId()){
+    {
+        if (follower->getProfileId() == p->getProfileId())
+        {
             cout << "follower ja existe" << endl;
             return;
         }
@@ -59,4 +70,35 @@ void Profile::addFollower(Profile *follower)
     cout << "Will add follower " << follower->getProfileId() << endl;
 
     this->followers->push_back(follower);
+}
+
+void Profile::sendOrInsertInbox(Packet *packet)
+{
+    if (this->getSessionsOn() > 0)
+    {
+        cout << "entrou if" << endl;
+        for (auto session : *this->sessions)
+        {
+            cout << "sending packet" << endl;
+            session->sendPacket(packet);
+        }
+    }
+    else
+    {
+        cout << "entrou else" << endl;
+        this->inbox->insertPacket(packet);
+    }
+}
+
+void Profile::fetchInboxContent()
+{
+    while (this->inbox->hasPacket())
+    {
+        Packet *packet = this->inbox->popPacket();
+        for (auto session : *this->sessions)
+        {
+            //send pending packet to client
+            session->sendPacket(packet);
+        }
+    }
 }
