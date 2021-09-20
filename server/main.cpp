@@ -100,11 +100,11 @@ void *from_client(void *_conn)
         {
             // concorrencia!!
             // decrease sessionsOn and remove Profile
-            if (profile->getSessionsOn() > 0)
-            {
-                profile->decSessionsOn(conn);
-                cout << "Decrementou" << endl;
-            }
+            // if (profile->getSessionsOn() > 0)
+            // {
+            profile->decSessionsOn(conn);
+            cout << "Decrementou" << endl;
+            // }
             clientWantsToQuit = true;
             break;
         }
