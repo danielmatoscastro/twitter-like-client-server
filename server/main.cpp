@@ -92,8 +92,7 @@ void *from_client(void *_conn)
 
             if (profiles->hasProfile(packet->getPayload()))
             {
-                Profile *profileToFollow = profiles->getProfileById(packet->getPayload());
-                profileToFollow->addFollower(profile);
+                profiles->addFollowerTo(packet->getPayload(), profile);
             }
             break;
         }
@@ -137,7 +136,7 @@ void *from_client(void *_conn)
 
 int main()
 {
-    profiles = new ProfilesManager();
+    profiles = new ProfilesManager("state.json");
     Server *server = new Server(PORT);
 
     while (true)

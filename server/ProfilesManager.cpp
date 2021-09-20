@@ -1,10 +1,12 @@
-
+#include <fstream>
+#include <iostream>
 #include "ProfilesManager.h"
 
 using namespace std;
 
-ProfilesManager::ProfilesManager()
+ProfilesManager::ProfilesManager(string jsonFilename)
 {
+    this->jsonFilename = jsonFilename;
     this->profiles = new map<string, Profile *>();
 }
 
@@ -15,6 +17,8 @@ bool ProfilesManager::insertProfile(string profileId, Profile *profile)
     {
         profiles->insert(pair<string, Profile *>(profileId, profile));
     }
+
+    this->toJsonFile();
 
     return !isInMap;
 }
@@ -33,4 +37,33 @@ Profile *ProfilesManager::getProfileById(string profileId)
 bool ProfilesManager::hasProfile(string profileId)
 {
     return profiles->count(profileId) > 0;
+}
+
+void ProfilesManager::addFollowerTo(string followed, Profile *follower)
+{
+    Profile *profileToFollow = this->getProfileById(followed);
+    profileToFollow->getFollowers()->push_back(follower);
+
+    this->toJsonFile();
+}
+
+void ProfilesManager::toJsonFile()
+{
+    json j;
+
+    for (auto entry : *this->profiles)
+    {
+        auto names = new vector<string>();
+        for (auto follower : *entry.second->getFollowers())
+        {
+            names->push_back(follower->getProfileId());
+        }
+        j[entry.first] = *names;
+    }
+
+    ofstream jsonFile(this->jsonFilename, ios::out);
+    jsonFile << j;
+    jsonFile.close();
+
+    cout << j << endl;
 }
