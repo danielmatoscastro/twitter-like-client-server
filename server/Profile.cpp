@@ -7,7 +7,6 @@ using namespace std;
 Profile::Profile(string profile_id)
 {
     this->profile_id = profile_id;
-    this->messages = new vector<Packet *>();
     this->sessions_on = 0;
     this->followers = new vector<Profile *>();
     this->inbox = new Inbox();
@@ -17,11 +16,6 @@ Profile::Profile(string profile_id)
 string Profile::getProfileId()
 {
     return this->profile_id;
-}
-
-vector<Packet *> *Profile::getMessages()
-{
-    return this->messages;
 }
 
 int Profile::getSessionsOn()
@@ -34,31 +28,31 @@ vector<Profile *> *Profile::getFollowers()
     return this->followers;
 }
 
-Inbox *Profile::getInbox()
-{
-    return this->inbox;
-}
-
 void Profile::incSessionsOn(ClientConnection *conn)
 {
+    pthread_mutex_lock(&m);
     this->sessions_on++;
     this->sessions->push_back(conn);
     cout << "Quantos tem? " << this->sessions->size() << endl;
+    pthread_mutex_unlock(&m);
 }
 
 void Profile::decSessionsOn(ClientConnection *conn)
 {
-
+    pthread_mutex_lock(&m);
     auto it = find(this->sessions->begin(), this->sessions->end(), conn);
     if (it != this->sessions->end())
     {
         this->sessions->erase(it);
         this->sessions_on--;
+        cout << "Decrementou" << endl;
     }
+    pthread_mutex_unlock(&m);
 }
 
 void Profile::addFollower(Profile *follower)
 {
+    pthread_mutex_lock(&m);
     for (auto p : *followers)
     {
         if (follower->getProfileId() == p->getProfileId())
@@ -70,10 +64,12 @@ void Profile::addFollower(Profile *follower)
     cout << "Will add follower " << follower->getProfileId() << endl;
 
     this->followers->push_back(follower);
+    pthread_mutex_unlock(&m);
 }
 
 void Profile::sendOrInsertInbox(Packet *packet)
 {
+    pthread_mutex_lock(&m);
     if (this->getSessionsOn() > 0)
     {
         cout << "entrou if" << endl;
@@ -88,10 +84,12 @@ void Profile::sendOrInsertInbox(Packet *packet)
         cout << "entrou else" << endl;
         this->inbox->insertPacket(packet);
     }
+    pthread_mutex_unlock(&m);
 }
 
 void Profile::fetchInboxContent()
 {
+    pthread_mutex_lock(&m);
     while (this->inbox->hasPacket())
     {
         Packet *packet = this->inbox->popPacket();
@@ -101,4 +99,5 @@ void Profile::fetchInboxContent()
             session->sendPacket(packet);
         }
     }
+    pthread_mutex_unlock(&m);
 }

@@ -18,7 +18,6 @@
 #include "ProfilesManager.h"
 
 #define PORT 4242
-#define MAX_SESSIONS 2
 
 using namespace std;
 
@@ -31,36 +30,14 @@ Profile *receiveProfileCmd(ClientConnection *conn)
     Packet *packet = conn->receivePacket();
     if (packet->getCmd() != CmdType::PROFILE)
     {
-        cout << "Vai morrer again bro" << endl;
         toClient = new Packet(CmdType::CLOSE_CONN);
         conn->sendPacket(toClient);
         conn->close();
         pthread_exit(nullptr);
     }
-    
-    //Incluir mutex inicio
-    if (profiles->hasProfile(packet->getPayload())) // if profile exists
-    {
-        profile = profiles->getProfileById(packet->getPayload());
-        if (profile->getSessionsOn() == MAX_SESSIONS)
-        {
-            cout << "Vai morrer bro" << endl;
-            toClient = new Packet(CmdType::CLOSE_CONN);
-            conn->sendPacket(toClient);
-            conn->close();
-            pthread_exit(nullptr);
-        }
-    }
-    else
-    {
-        profile = new Profile(packet->getPayload());
-        profiles->insertProfile(packet->getPayload(), profile);
-        cout << "PROFILE " << packet->getPayload() << " has been planted" << endl;
-    }
-    //Incluir mutex fim
-    
-    profile->incSessionsOn(conn);
-
+    cout << "pre-hi" << endl;
+    profile = profiles->createProfileIfNotExists(packet->getPayload(), conn);
+    cout << "hi" << endl;
     return profile;
 }
 
@@ -85,41 +62,18 @@ void *from_client(void *_conn)
         {
         case CmdType::FOLLOW:
         {
-            if (profile->getProfileId() == packet->getPayload())
-            {
-                cout << "vai dar nao mermao" << endl;
-                break;
-            }
-
-            cout << profile->getProfileId() << " wants to follow " << packet->getPayload() << endl;
-
-            if (profiles->hasProfile(packet->getPayload()))
-            {
-                profiles->addFollowerTo(packet->getPayload(), profile);
-            }
+            profiles->addFollowerTo(packet->getPayload(), profile);
             break;
         }
         case CmdType::CLOSE_CONN:
         {
-            // concorrencia!!
-            // decrease sessionsOn and remove Profile
-            // if (profile->getSessionsOn() > 0)
-            // {
             profile->decSessionsOn(conn);
-            cout << "Decrementou" << endl;
-            // }
             clientWantsToQuit = true;
             break;
         }
         case CmdType::SEND:
         {
-            for (int i = 0; i < profile->getFollowers()->size(); i++)
-            {
-                Profile *follower = profile->getFollowers()->at(i);
-                cout << "inserindo " << packet->getPayload() << " na inbox de " << follower->getProfileId() << endl;
-                follower->sendOrInsertInbox(packet);
-            }
-            cout << profile->getProfileId() << " says: " << packet->getPayload() << endl;
+            profiles->sendToFollowersOf(profile, packet);
             break;
         }
         default:
@@ -129,7 +83,7 @@ void *from_client(void *_conn)
         }
         }
 
-        Packet *yep = new Packet(CmdType::SEND, "Yep!");
+        Packet *yep = new Packet(CmdType::SEND, "Yep!", "server");
         conn->sendPacket(yep);
     }
 
