@@ -15,13 +15,13 @@
 #include "Server.h"
 #include "ClientConnection.h"
 #include "Profile.h"
-#include "ProfilesManager.h"
+#include "ProfileAccessController.h"
 
 #define PORT 4242
 
 using namespace std;
 
-ProfilesManager *profiles;
+ProfileAccessController *profiles;
 
 Profile *receiveProfileCmd(ClientConnection *conn)
 {
@@ -35,9 +35,7 @@ Profile *receiveProfileCmd(ClientConnection *conn)
         conn->close();
         pthread_exit(nullptr);
     }
-    cout << "pre-hi" << endl;
     profile = profiles->createProfileIfNotExists(packet->getPayload(), conn);
-    cout << "hi" << endl;
     return profile;
 }
 
@@ -93,7 +91,7 @@ void *from_client(void *_conn)
 
 int main()
 {
-    profiles = new ProfilesManager("state.json");
+    profiles = new ProfileAccessController("state.json");
     Server *server = new Server(PORT);
 
     while (true)

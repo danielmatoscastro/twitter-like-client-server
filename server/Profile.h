@@ -19,7 +19,6 @@ public:
     vector<Profile *> *getFollowers();
     void incSessionsOn(ClientConnection *conn);
     void decSessionsOn(ClientConnection *conn);
-    void addFollower(Profile *follower);
     void sendOrInsertInbox(Packet *packet);
     void fetchInboxContent();
 

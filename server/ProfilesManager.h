@@ -8,7 +8,6 @@
 #include "ClientConnection.h"
 #include "../commons/Packet.h"
 #include "../lib/json.hpp"
-#include "ProfileAccessController.h"
 
 #define MAX_SESSIONS 2
 
@@ -29,8 +28,8 @@ public:
 private:
     string jsonFilename;
     map<string, Profile *> *profiles;
-    ProfileAccessController *controller;
     void toJsonFile();
+    void fromJsonFile();
 };
 
 #endif

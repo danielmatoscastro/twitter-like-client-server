@@ -3,12 +3,59 @@
 
 using namespace std;
 
-ProfileAccessController::ProfileAccessController()
+ProfileAccessController::ProfileAccessController(string jsonFilename)
 {
+    this->profilesManager = new ProfilesManager(jsonFilename);
     this->num_readers = 0;
     this->num_writers = 0;
     pthread_cond_init(&ok_to_read, NULL);
     pthread_cond_init(&ok_to_write, NULL);
+}
+
+bool ProfileAccessController::insertProfile(string profileId, Profile *profile)
+{
+    this->requestWrite();
+    bool rtn = this->profilesManager->insertProfile(profileId, profile);
+    this->releaseWrite();
+    return rtn;
+}
+
+Profile *ProfileAccessController::getProfileById(string profileId)
+{
+    this->requestRead();
+    Profile *profile = this->profilesManager->getProfileById(profileId);
+    this->releaseRead();
+    return profile;
+}
+
+bool ProfileAccessController::hasProfile(string profileId)
+{
+    this->requestRead();
+    bool rtn = this->profilesManager->hasProfile(profileId);
+    this->releaseRead();
+    return rtn;
+}
+
+void ProfileAccessController::addFollowerTo(string followed, Profile *follower)
+{
+    this->requestWrite();
+    this->profilesManager->addFollowerTo(followed, follower);
+    this->releaseWrite();
+}
+
+void ProfileAccessController::sendToFollowersOf(Profile *profile, Packet *packet)
+{
+    this->requestWrite();
+    this->profilesManager->sendToFollowersOf(profile, packet);
+    this->releaseWrite();
+}
+
+Profile *ProfileAccessController::createProfileIfNotExists(string profileId, ClientConnection *conn)
+{
+    this->requestWrite();
+    Profile *profile = this->profilesManager->createProfileIfNotExists(profileId, conn);
+    this->releaseWrite();
+    return profile;
 }
 
 void ProfileAccessController::requestRead()

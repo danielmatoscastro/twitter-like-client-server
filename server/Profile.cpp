@@ -33,7 +33,6 @@ void Profile::incSessionsOn(ClientConnection *conn)
     pthread_mutex_lock(&m);
     this->sessions_on++;
     this->sessions->push_back(conn);
-    cout << "Quantos tem? " << this->sessions->size() << endl;
     pthread_mutex_unlock(&m);
 }
 
@@ -45,25 +44,8 @@ void Profile::decSessionsOn(ClientConnection *conn)
     {
         this->sessions->erase(it);
         this->sessions_on--;
-        cout << "Decrementou" << endl;
+        cout << "Client "<< this->getProfileId() << " disconected..." << endl;
     }
-    pthread_mutex_unlock(&m);
-}
-
-void Profile::addFollower(Profile *follower)
-{
-    pthread_mutex_lock(&m);
-    for (auto p : *followers)
-    {
-        if (follower->getProfileId() == p->getProfileId())
-        {
-            cout << "follower ja existe" << endl;
-            return;
-        }
-    }
-    cout << "Will add follower " << follower->getProfileId() << endl;
-
-    this->followers->push_back(follower);
     pthread_mutex_unlock(&m);
 }
 
@@ -72,7 +54,6 @@ void Profile::sendOrInsertInbox(Packet *packet)
     pthread_mutex_lock(&m);
     if (this->getSessionsOn() > 0)
     {
-        cout << "entrou if" << endl;
         for (auto session : *this->sessions)
         {
             cout << "sending packet" << endl;
@@ -81,7 +62,6 @@ void Profile::sendOrInsertInbox(Packet *packet)
     }
     else
     {
-        cout << "entrou else" << endl;
         this->inbox->insertPacket(packet);
     }
     pthread_mutex_unlock(&m);

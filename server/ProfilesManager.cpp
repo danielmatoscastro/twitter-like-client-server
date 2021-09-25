@@ -1,20 +1,20 @@
 #include <fstream>
 #include <iostream>
 #include "ProfilesManager.h"
+#include <experimental/filesystem>
 
 using namespace std;
 
 ProfilesManager::ProfilesManager(string jsonFilename)
-{
+{   
     this->jsonFilename = jsonFilename;
     this->profiles = new map<string, Profile *>();
-    this->controller = new ProfileAccessController();
+    this->fromJsonFile();
 }
 
 bool ProfilesManager::insertProfile(string profileId, Profile *profile)
 {
-    controller->requestWrite();
-
+    
     bool isInMap = profiles->count(profileId) > 0;
     if (!isInMap)
     {
@@ -23,43 +23,33 @@ bool ProfilesManager::insertProfile(string profileId, Profile *profile)
 
     this->toJsonFile();
 
-    controller->releaseWrite();
-
+    
     return !isInMap;
 }
 Profile *ProfilesManager::getProfileById(string profileId)
 {
-    cout << "vou pegar o segundo lock" << endl;
-    controller->requestRead();
-    cout << "peguei o segundo lock" << endl;
     auto it = profiles->find(profileId);
 
     if (it == profiles->end())
     {
-        controller->releaseRead();
         return nullptr;
     }
 
-    controller->releaseRead();
     return it->second;
 }
 
 bool ProfilesManager::hasProfile(string profileId)
 {
-    controller->requestRead();
     bool has = profiles->count(profileId) > 0;
-    controller->releaseRead();
 
     return has;
 }
 
 void ProfilesManager::addFollowerTo(string followed, Profile *follower)
 {
-    controller->requestWrite();
-
+    
     if (follower->getProfileId() == followed)
     {
-        controller->releaseWrite();
         return;
     }
 
@@ -68,7 +58,7 @@ void ProfilesManager::addFollowerTo(string followed, Profile *follower)
     Profile *profileToFollow = this->getProfileById(followed);
     if (profileToFollow == nullptr)
     {
-        controller->releaseWrite();
+    
         return;
     }
 
@@ -83,8 +73,6 @@ void ProfilesManager::addFollowerTo(string followed, Profile *follower)
         profileToFollow->getFollowers()->push_back(follower);
         this->toJsonFile();
     }
-
-    controller->releaseWrite();
 }
 
 void ProfilesManager::toJsonFile()
@@ -105,31 +93,46 @@ void ProfilesManager::toJsonFile()
     jsonFile << j;
     jsonFile.close();
 
-    cout << j << endl;
+    // Print json file
+    // cout << j << endl;
+}
+
+void ProfilesManager::fromJsonFile(){
+    
+    ifstream jsonFile(this->jsonFilename, ios::in);
+    
+    if(jsonFile){
+        json jDict;
+        jsonFile >> jDict;
+        jsonFile.close();
+
+        for (auto& profile : jDict.items()) {
+            profiles->insert(pair<string, Profile *>(profile.key(), new Profile(profile.key()))); 
+        }
+
+        for (auto& profile : jDict.items()) {
+            for(auto follower: profile.value()){
+                this->addFollowerTo(profile.key(), this->getProfileById(follower));
+            }
+        }
+    }
 }
 
 void ProfilesManager::sendToFollowersOf(Profile *profile, Packet *packet)
 {
-    controller->requestWrite();
-
     for (int i = 0; i < profile->getFollowers()->size(); i++)
     {
         Profile *follower = profile->getFollowers()->at(i);
-        cout << "inserindo " << packet->getPayload() << " na inbox de " << follower->getProfileId() << endl;
+        cout << "Adding \"" << packet->getPayload() << "\" in the inbox of " << follower->getProfileId() << endl;
         follower->sendOrInsertInbox(packet);
     }
-    cout << profile->getProfileId() << " says: " << packet->getPayload() << endl;
 
-    controller->releaseWrite();
+    cout << profile->getProfileId() << " says: " << packet->getPayload() << endl;
 }
 
 Profile *ProfilesManager::createProfileIfNotExists(string profileId, ClientConnection *conn)
 {
-    controller->requestWrite();
-
-    cout << "peguei o lock" << endl;
     Profile *profile = this->getProfileById(profileId);
-    cout << "fiz o get" << endl;
     if (profile != nullptr)
     {
         if (profile->getSessionsOn() == MAX_SESSIONS)
@@ -137,8 +140,7 @@ Profile *ProfilesManager::createProfileIfNotExists(string profileId, ClientConne
             Packet *toClient = new Packet(CmdType::CLOSE_CONN);
             conn->sendPacket(toClient);
             conn->close();
-            controller->releaseWrite();
-
+        
             pthread_exit(nullptr);
         }
     }
@@ -146,13 +148,10 @@ Profile *ProfilesManager::createProfileIfNotExists(string profileId, ClientConne
     {
         profile = new Profile(profileId);
         this->insertProfile(profileId, profile);
-        cout << "PROFILE " << profileId << " has been planted" << endl;
+        cout << "Profile " << profileId << " was created." << endl;
     }
-    //Incluir mutex fim
 
     profile->incSessionsOn(conn);
-
-    controller->releaseWrite();
 
     return profile;
 }
