@@ -21,6 +21,7 @@ public:
     void decSessionsOn(ClientConnection *conn);
     void sendOrInsertInbox(Packet *packet);
     void fetchInboxContent();
+    vector<ClientConnection *> *getSessions();
 
 private:
     string profile_id;

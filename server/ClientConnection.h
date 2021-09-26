@@ -16,6 +16,8 @@ public:
 
 private:
     int clientfd;
+    bool closed;
+    pthread_mutex_t m = PTHREAD_MUTEX_INITIALIZER;
     void sendMessage(const char *msg);
     char *receiveMessage();
 };

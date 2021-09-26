@@ -24,6 +24,7 @@ public:
     void addFollowerTo(string followed, Profile *follower);
     void sendToFollowersOf(Profile *profile, Packet *packet);
     Profile *createProfileIfNotExists(string profileId, ClientConnection *conn);
+    void sendCloseConnToAll();
 
 private:
     string jsonFilename;

@@ -23,6 +23,11 @@ int Profile::getSessionsOn()
     return this->sessions_on;
 }
 
+vector<ClientConnection *> *Profile::getSessions()
+{
+    return this->sessions;
+}
+
 vector<Profile *> *Profile::getFollowers()
 {
     return this->followers;
@@ -44,7 +49,7 @@ void Profile::decSessionsOn(ClientConnection *conn)
     {
         this->sessions->erase(it);
         this->sessions_on--;
-        cout << "Client "<< this->getProfileId() << " disconected..." << endl;
+        cout << "Client " << this->getProfileId() << " disconected..." << endl;
     }
     pthread_mutex_unlock(&m);
 }

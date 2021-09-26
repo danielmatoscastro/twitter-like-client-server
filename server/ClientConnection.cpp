@@ -16,6 +16,7 @@ using namespace std;
 ClientConnection::ClientConnection(int clientfd)
 {
     this->clientfd = clientfd;
+    this->closed = false;
 }
 
 void ClientConnection::sendMessage(const char *msg)
@@ -49,7 +50,19 @@ Packet *ClientConnection::receivePacket()
     return packet;
 }
 
+bool ClientConnection::isClosed()
+{
+    pthread_mutex_lock(&m);
+    bool ret = this->closed;
+    pthread_mutex_unlock(&m);
+
+    return ret;
+}
+
 void ClientConnection::close()
 {
+    pthread_mutex_lock(&m);
+    this->closed = true;
     ::close(this->clientfd);
+    pthread_mutex_unlock(&m);
 }

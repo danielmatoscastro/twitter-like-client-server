@@ -23,11 +23,11 @@ void interruption_handler(sig_atomic_t sigAtomic)
 void *to_server(void *args)
 {
     string line;
-    char * profile = (char *) args;
+    char *profile = (char *)args;
 
+    getline(cin, line);
     while (!cin.eof())
     {
-        getline(cin, line);
         if (!con->isClosed())
         {
             Packet *packet;
@@ -57,10 +57,13 @@ void *to_server(void *args)
         {
             pthread_exit(NULL);
         }
+
+        getline(cin, line);
     }
 
+    con->sendPacket(new Packet(CmdType::CLOSE_CONN));
     con->close();
-    pthread_exit(NULL);
+    exit(EXIT_SUCCESS);
 }
 
 void *from_server(void *args)
@@ -75,12 +78,11 @@ void *from_server(void *args)
             exit(EXIT_SUCCESS);
         }
         else
-        {   
+        {
             stringstream ss;
             time_t time = packet->getTimestamp();
-            ss << put_time(localtime(&time), "%b %d %H:%M:%S %Y"); 
-            cout << packet->getSender() << ": " << packet->getPayload() << " at: "<<  ss.str() << endl;
-            // cout << packet->getPayload() << endl;
+            ss << put_time(localtime(&time), "%b %d %H:%M:%S %Y");
+            cout << packet->getSender() << ": " << packet->getPayload() << " at: " << ss.str() << endl;
         }
     }
 

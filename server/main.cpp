@@ -10,6 +10,7 @@
 #include <netinet/in.h>
 #include <netdb.h>
 #include <pthread.h>
+#include <signal.h>
 #include <iostream>
 #include "../commons/Packet.h"
 #include "Server.h"
@@ -22,6 +23,7 @@
 using namespace std;
 
 ProfileAccessController *profiles;
+Server *server;
 
 Profile *receiveProfileCmd(ClientConnection *conn)
 {
@@ -52,7 +54,7 @@ void *from_client(void *_conn)
          << "Waiting for client message ..." << endl;
 
     bool clientWantsToQuit = false;
-    while (!clientWantsToQuit)
+    while (!clientWantsToQuit && !conn->isClosed())
     {
         Packet *packet = conn->receivePacket();
 
@@ -89,10 +91,18 @@ void *from_client(void *_conn)
     pthread_exit(nullptr);
 }
 
+void interruption_handler(sig_atomic_t sigAtomic)
+{
+    profiles->sendCloseConnToAll();
+    server->close();
+    exit(EXIT_SUCCESS);
+}
+
 int main()
 {
+    signal(SIGINT, interruption_handler);
     profiles = new ProfileAccessController("state.json");
-    Server *server = new Server(PORT);
+    server = new Server(PORT);
 
     while (true)
     {

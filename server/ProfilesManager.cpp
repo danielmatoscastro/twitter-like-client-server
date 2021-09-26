@@ -6,7 +6,7 @@
 using namespace std;
 
 ProfilesManager::ProfilesManager(string jsonFilename)
-{   
+{
     this->jsonFilename = jsonFilename;
     this->profiles = new map<string, Profile *>();
     this->fromJsonFile();
@@ -14,7 +14,7 @@ ProfilesManager::ProfilesManager(string jsonFilename)
 
 bool ProfilesManager::insertProfile(string profileId, Profile *profile)
 {
-    
+
     bool isInMap = profiles->count(profileId) > 0;
     if (!isInMap)
     {
@@ -23,7 +23,6 @@ bool ProfilesManager::insertProfile(string profileId, Profile *profile)
 
     this->toJsonFile();
 
-    
     return !isInMap;
 }
 Profile *ProfilesManager::getProfileById(string profileId)
@@ -47,7 +46,7 @@ bool ProfilesManager::hasProfile(string profileId)
 
 void ProfilesManager::addFollowerTo(string followed, Profile *follower)
 {
-    
+
     if (follower->getProfileId() == followed)
     {
         return;
@@ -58,7 +57,7 @@ void ProfilesManager::addFollowerTo(string followed, Profile *follower)
     Profile *profileToFollow = this->getProfileById(followed);
     if (profileToFollow == nullptr)
     {
-    
+
         return;
     }
 
@@ -97,21 +96,26 @@ void ProfilesManager::toJsonFile()
     // cout << j << endl;
 }
 
-void ProfilesManager::fromJsonFile(){
-    
+void ProfilesManager::fromJsonFile()
+{
+
     ifstream jsonFile(this->jsonFilename, ios::in);
-    
-    if(jsonFile){
+
+    if (jsonFile)
+    {
         json jDict;
         jsonFile >> jDict;
         jsonFile.close();
 
-        for (auto& profile : jDict.items()) {
-            profiles->insert(pair<string, Profile *>(profile.key(), new Profile(profile.key()))); 
+        for (auto &profile : jDict.items())
+        {
+            profiles->insert(pair<string, Profile *>(profile.key(), new Profile(profile.key())));
         }
 
-        for (auto& profile : jDict.items()) {
-            for(auto follower: profile.value()){
+        for (auto &profile : jDict.items())
+        {
+            for (auto follower : profile.value())
+            {
                 this->addFollowerTo(profile.key(), this->getProfileById(follower));
             }
         }
@@ -140,7 +144,7 @@ Profile *ProfilesManager::createProfileIfNotExists(string profileId, ClientConne
             Packet *toClient = new Packet(CmdType::CLOSE_CONN);
             conn->sendPacket(toClient);
             conn->close();
-        
+
             pthread_exit(nullptr);
         }
     }
@@ -154,4 +158,17 @@ Profile *ProfilesManager::createProfileIfNotExists(string profileId, ClientConne
     profile->incSessionsOn(conn);
 
     return profile;
+}
+
+void ProfilesManager::sendCloseConnToAll()
+{
+    for (auto const &p : *this->profiles)
+    {
+        Profile *profile = p.second;
+        for (ClientConnection *conn : *profile->getSessions())
+        {
+            conn->sendPacket(new Packet(CmdType::CLOSE_CONN));
+            conn->close();
+        }
+    }
 }

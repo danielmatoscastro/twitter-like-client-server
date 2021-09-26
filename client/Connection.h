@@ -1,6 +1,3 @@
-//
-// Created by daniel on 26/08/2021.
-//
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -40,4 +37,4 @@ private:
     char *receiveMessage();
 };
 
-#endif //TWITTER_CONNECTION_H
+#endif

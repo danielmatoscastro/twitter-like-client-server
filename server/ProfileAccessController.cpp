@@ -58,6 +58,13 @@ Profile *ProfileAccessController::createProfileIfNotExists(string profileId, Cli
     return profile;
 }
 
+void ProfileAccessController::sendCloseConnToAll()
+{
+    this->requestWrite();
+    this->profilesManager->sendCloseConnToAll();
+    this->releaseWrite();
+}
+
 void ProfileAccessController::requestRead()
 {
     pthread_mutex_lock(&m);
