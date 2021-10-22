@@ -10,4 +10,5 @@
 **/*.o
 server/server
 client/client
+router/router
 .vscode
