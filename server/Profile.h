@@ -5,7 +5,7 @@
 #include <vector>
 #include <pthread.h>
 #include "../commons/Packet.h"
-#include "ClientConnection.h"
+#include "../commons/ClientConnection.h"
 #include "Inbox.h"
 
 using namespace std;

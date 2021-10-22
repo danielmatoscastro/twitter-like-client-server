@@ -4,11 +4,11 @@ server: Packet.o Inbox.o Profile.o ProfileAccessController.o ProfilesManager.o C
 main.o: main.cpp
 	g++ -c main.cpp -std=c++17 -O2 -lm -lpthread
 
-Server.o: Server.cpp Server.h
-	g++ -c Server.cpp -std=c++17 -O2 -lm -lpthread
+Server.o: ../commons/Server.cpp ../commons/Server.h
+	g++ -c ../commons/Server.cpp -std=c++17 -O2 -lm -lpthread
 
-ClientConnection.o: ClientConnection.cpp ClientConnection.h
-	g++ -c ClientConnection.cpp -std=c++17 -O2 -lm -lpthread
+ClientConnection.o: ../commons/ClientConnection.cpp ../commons/ClientConnection.h
+	g++ -c ../commons/ClientConnection.cpp -std=c++17 -O2 -lm -lpthread
 
 ProfilesManager.o: ProfilesManager.cpp ProfilesManager.h
 	g++ -c ProfilesManager.cpp -std=c++17 -O2 -lm -lpthread

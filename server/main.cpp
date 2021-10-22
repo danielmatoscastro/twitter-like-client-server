@@ -13,8 +13,8 @@
 #include <signal.h>
 #include <iostream>
 #include "../commons/Packet.h"
-#include "Server.h"
-#include "ClientConnection.h"
+#include "../commons/Server.h"
+#include "../commons/ClientConnection.h"
 #include "Profile.h"
 #include "ProfileAccessController.h"
 

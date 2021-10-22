@@ -5,7 +5,7 @@
 #include <map>
 #include <pthread.h>
 #include "Profile.h"
-#include "ClientConnection.h"
+#include "../commons/ClientConnection.h"
 #include "../commons/Packet.h"
 #include "../lib/json.hpp"
 
