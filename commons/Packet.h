@@ -12,7 +12,10 @@ enum CmdType
     PROFILE = 1,
     CLOSE_CONN = 2,
     FOLLOW = 3,
-    SEND = 4
+    SEND = 4,
+    SET_PRIMARY_IF_NOT_EXISTS = 5,
+    SET_PRIMARY = 6,
+    GET_PRIMARY = 7
 };
 
 class Packet

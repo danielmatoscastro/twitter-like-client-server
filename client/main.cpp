@@ -3,7 +3,7 @@
 #include <string>
 #include <signal.h>
 #include <pthread.h>
-#include "Connection.h"
+#include "../commons/Connection.h"
 #include "../commons/Packet.h"
 
 #define MAX_MSG_LEN 128

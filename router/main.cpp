@@ -15,7 +15,7 @@
 #include "../commons/Server.h"
 #include "../commons/Packet.h"
 
-#define PORT 4242
+#define PORT 3000
 
 using namespace std;
 
@@ -26,15 +26,40 @@ void interruption_handler(sig_atomic_t sigAtomic)
 
 Server *server;
 
+struct sockaddr_in primaryServer;
+bool hasPrimary = false;
+
 void *from_client(void *_conn)
 {
     ClientConnection *conn = (ClientConnection *)_conn;
-
-    while (!conn->isClosed())
+    bool clientWantsToQuit = false;
+    while (!clientWantsToQuit)
     {
         Packet *packet = conn->receivePacket();
         switch (packet->getCmd())
         {
+        case CmdType::SET_PRIMARY_IF_NOT_EXISTS:
+        {
+            if (!hasPrimary)
+            {
+                string payload = packet->getPayload();
+                // formato "addr:port"
+                size_t pos = payload.find(':');
+                string addr = payload.substr(0, pos);
+                string port = payload.substr(pos + 1);
+
+                cout << "addr: " << addr << " port: " << port << endl;
+            }
+
+            break;
+        }
+        case CmdType::CLOSE_CONN:
+        {
+            cout << "client wants to quit" << endl;
+            clientWantsToQuit = true;
+
+            break;
+        }
         default:
         {
             cout << "I dont know..." << endl;

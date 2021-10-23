@@ -14,6 +14,7 @@
 #include <iostream>
 #include "../commons/Packet.h"
 #include "../commons/Server.h"
+#include "../commons/Connection.h"
 #include "../commons/ClientConnection.h"
 #include "Profile.h"
 #include "ProfileAccessController.h"
@@ -22,6 +23,7 @@
 
 using namespace std;
 
+Connection *routerConn;
 ProfileAccessController *profiles;
 Server *server;
 
@@ -101,6 +103,11 @@ void interruption_handler(sig_atomic_t sigAtomic)
 int main()
 {
     signal(SIGINT, interruption_handler);
+    routerConn = new Connection(3000, "127.0.0.1");
+    routerConn->sendPacket(new Packet(CmdType::SET_PRIMARY_IF_NOT_EXISTS, "127.0.0.1:4242"));
+    routerConn->sendPacket(new Packet(CmdType::CLOSE_CONN));
+    routerConn->close();
+
     profiles = new ProfileAccessController("state.json");
     server = new Server(PORT);
 
