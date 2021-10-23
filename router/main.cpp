@@ -1,10 +1,10 @@
-//
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
 #include <errno.h>
 
+#include <arpa/inet.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -26,8 +26,10 @@ void interruption_handler(sig_atomic_t sigAtomic)
 
 Server *server;
 
-struct sockaddr_in primaryServer;
+string primaryServer;
 bool hasPrimary = false;
+
+void setPrimary(Packet* packet);
 
 void *from_client(void *_conn)
 {
@@ -38,39 +40,67 @@ void *from_client(void *_conn)
         Packet *packet = conn->receivePacket();
         switch (packet->getCmd())
         {
-        case CmdType::SET_PRIMARY_IF_NOT_EXISTS:
-        {
-            if (!hasPrimary)
+            case CmdType::SET_PRIMARY_IF_NOT_EXISTS:
             {
-                string payload = packet->getPayload();
-                // formato "addr:port"
-                size_t pos = payload.find(':');
-                string addr = payload.substr(0, pos);
-                string port = payload.substr(pos + 1);
+                if (!hasPrimary)
+                {
+                    setPrimary(packet);
+                }
 
-                cout << "addr: " << addr << " port: " << port << endl;
+                break;
             }
+            case CmdType::SET_PRIMARY:
+            {
+                setPrimary(packet);
+                break;
+            }
+            case CmdType::GET_PRIMARY:
+            {   
+                Packet* payload = new Packet(CmdType::SET_PRIMARY, primaryServer);
+                conn->sendPacket(payload);
+                break;
+            }
+            case CmdType::CLOSE_CONN:
+            {
+                cout << "client wants to quit" << endl;
+                clientWantsToQuit = true;
 
-            break;
-        }
-        case CmdType::CLOSE_CONN:
-        {
-            cout << "client wants to quit" << endl;
-            clientWantsToQuit = true;
-
-            break;
-        }
-        default:
-        {
-            cout << "I dont know..." << endl;
-            break;
-        }
+                break;
+            }
+            default:
+            {
+                cout << "I dont know..." << endl;
+                break;
+            }
         }
     }
 
     conn->close();
     pthread_exit(nullptr);
 }
+
+void setPrimary(Packet* packet){
+    primaryServer = packet->getPayload();
+    cout << "Primary server " << primaryServer << endl;
+}
+
+// void setPrimary(Packet* packet){
+//     string payload = packet->getPayload();
+//     // formato "addr:port"
+//     size_t pos = payload.find(':');
+//     string strAddr = payload.substr(0, pos);
+//     string strPort = payload.substr(pos + 1);
+
+//     uint16_t port = stoi(strPort);
+
+//     primaryServer.sin_family = AF_INET;
+//     primaryServer.sin_port = htons(port);
+//     primaryServer.sin_addr.s_addr = inet_addr(strAddr.c_str());
+
+//     memset(primaryServer.sin_zero, 0, 8);
+    
+//     cout << "Primary server " << "addr: " << strAddr << " port: " << strPort << endl;
+// }
 
 int main()
 {
