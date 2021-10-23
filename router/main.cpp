@@ -66,9 +66,6 @@ void *from_client(void *_conn)
             break;
         }
         }
-
-        Packet *yep = new Packet(CmdType::SEND, "Yep!", "router");
-        conn->sendPacket(yep);
     }
 
     conn->close();
