@@ -11,6 +11,7 @@
 Connection *con;
 pthread_t to_server_th;
 pthread_t from_server_th;
+pthread_t control_thread_th;
 
 void interruption_handler(sig_atomic_t sigAtomic)
 {
@@ -20,16 +21,60 @@ void interruption_handler(sig_atomic_t sigAtomic)
     exit(EXIT_SUCCESS);
 }
 
+Connection *routerConn;
+string primary = "random:primary";
+
+void send_presentation(char *profile)
+{
+    Packet *packet = new Packet(CmdType::PROFILE, profile);
+    con->sendPacket(packet);
+}
+
+void updateConn()
+{
+    cout << "hey" << endl;
+
+    Packet *IP_request = new Packet(CmdType::GET_PRIMARY);
+    routerConn->sendPacket(IP_request);
+    Packet *Response = routerConn->receivePacket();
+
+    string payload = Response->getPayload();
+
+    if (payload.compare(primary) != 0)
+    {
+        // formato "addr:port"
+        size_t pos = payload.find(':');
+        string addr = payload.substr(0, pos);
+        string port = payload.substr(pos + 1);
+
+        if (con)
+        {
+            con->close();
+        }
+
+        con = new Connection(stoi(port), addr.c_str());
+    }
+}
+
 void *to_server(void *args)
 {
     string line;
     char *profile = (char *)args;
 
+    updateConn();
+
+    send_presentation(profile);
+
+    cout << "aqui" << endl;
     getline(cin, line);
     while (!cin.eof())
     {
-        if (!con->isClosed())
+
+        cout << "oi" << endl;
+        if (con == nullptr || !con->isClosed())
         {
+            updateConn();
+
             Packet *packet;
             if (line.rfind("FOLLOW") == 0)
             {
@@ -68,6 +113,7 @@ void *to_server(void *args)
 
 void *from_server(void *args)
 {
+    updateConn();
     while (!con->isClosed())
     {
         Packet *packet = con->receivePacket();
@@ -89,10 +135,8 @@ void *from_server(void *args)
     pthread_exit(NULL);
 }
 
-void send_presentation(char *profile)
+void *control_thread(void *args)
 {
-    Packet *packet = new Packet(CmdType::PROFILE, profile);
-    con->sendPacket(packet);
 }
 
 int main(int argc, char *argv[])
@@ -113,11 +157,14 @@ int main(int argc, char *argv[])
         exit(EXIT_FAILURE);
     }
 
-    con = new Connection(stoi(port), addr);
+    cout << "ta de brinks" << endl;
+
+    routerConn = new Connection(stoi(port), addr);
+    // con = new Connection(stoi(port), addr);
+
+    cout << "claro que to" << endl;
 
     signal(SIGINT, interruption_handler);
-
-    send_presentation(profile);
 
     pthread_create(&to_server_th, NULL, to_server, profile);
     pthread_create(&from_server_th, NULL, from_server, NULL);
