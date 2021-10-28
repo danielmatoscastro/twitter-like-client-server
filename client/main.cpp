@@ -96,7 +96,12 @@ void *to_server(void *args)
                 continue;
             }
 
-            con->sendPacket(packet);
+            try{
+                con->sendPacket(packet);
+            }catch(...){
+                updateConn();
+                //cout << "Standard exception TO_SERVER: " << endl;
+            } 
         }
         else
         {
@@ -116,20 +121,27 @@ void *from_server(void *args)
     updateConn();
     while (!con->isClosed())
     {
-        Packet *packet = con->receivePacket();
-        if (packet->getCmd() == CmdType::CLOSE_CONN)
-        {
-            con->close();
-            cout << "Server sent CLOSE_CONN" << endl;
-            exit(EXIT_SUCCESS);
+        try{
+            Packet *packet = con->receivePacket();
+            if (packet->getCmd() == CmdType::CLOSE_CONN)
+            {
+                con->close();
+                cout << "Server sent CLOSE_CONN" << endl;
+                exit(EXIT_SUCCESS);
+            }
+            else
+            {
+                stringstream ss;
+                time_t time = packet->getTimestamp();
+                ss << put_time(localtime(&time), "%b %d %H:%M:%S %Y");
+                cout << packet->getSender() << ": " << packet->getPayload() << " at: " << ss.str() << endl;
+            }
+        }catch(...){
+            //Entra aqui quando o server for desligado (simulação de um crash)
+            updateConn();
+            cout << "Standard exception FROM_SERVER: " << endl;
         }
-        else
-        {
-            stringstream ss;
-            time_t time = packet->getTimestamp();
-            ss << put_time(localtime(&time), "%b %d %H:%M:%S %Y");
-            cout << packet->getSender() << ": " << packet->getPayload() << " at: " << ss.str() << endl;
-        }
+        
     }
 
     pthread_exit(NULL);

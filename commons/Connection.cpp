@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string>
+#include <iostream>
 
 using namespace std;
 
@@ -44,7 +45,12 @@ void Connection::sendMessage(const char *msg)
 char *Connection::receiveMessage()
 {
     memset(buffer_in, 0x0, PACKET_BUFFER_LEN);
-    recv(sockfd, buffer_in, PACKET_BUFFER_LEN, 0);
+    //recv(sockfd, buffer_in, PACKET_BUFFER_LEN, 0);
+    int retornoRecv = recv(sockfd, buffer_in, PACKET_BUFFER_LEN, 0);
+    if(retornoRecv == 0){
+        throw new exception;
+    }
+    //cout << "Teste recv: " << recv(sockfd, buffer_in, PACKET_BUFFER_LEN, 0) << endl;
     return buffer_in;
 }
 

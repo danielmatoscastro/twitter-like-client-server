@@ -15,7 +15,10 @@ enum CmdType
     SEND = 4,
     SET_PRIMARY_IF_NOT_EXISTS = 5,
     SET_PRIMARY = 6,
-    GET_PRIMARY = 7
+    GET_PRIMARY = 7,
+    SET_BACKUP = 8,
+    ALIVE = 9,
+    OK = 10
 };
 
 class Packet

@@ -45,6 +45,16 @@ void *from_client(void *_conn)
                 if (!hasPrimary)
                 {
                     setPrimary(packet);
+                    Packet* payload = new Packet(CmdType::OK, primaryServer);
+                    conn->sendPacket(payload);
+                    hasPrimary = true;
+                }else{
+                    Packet* payload = new Packet(CmdType::SET_PRIMARY, primaryServer);
+                    conn->sendPacket(payload);
+                    cout << "Else do primary if not exists" << endl;
+                    //primario é fulano
+                    //novo servidor se conecta e vira backup
+                    //primário de tempos em tempos manda um recado dizendo que ta vivo
                 }
 
                 break;
@@ -56,6 +66,8 @@ void *from_client(void *_conn)
             }
             case CmdType::GET_PRIMARY:
             {   
+                
+
                 Packet* payload = new Packet(CmdType::SET_PRIMARY, primaryServer);
                 conn->sendPacket(payload);
                 break;
