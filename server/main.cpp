@@ -42,15 +42,9 @@ Profile *receiveProfileCmd(ClientConnection *conn)
     }
     if (packet->getCmd() == CmdType::SET_BACKUP)
     {
-        cout << "Entrei no set backup" << endl;
-        // formato "addr:port"
-        //string payload = packet->getPayload();
-        //size_t pos = payload.find(':');
-        //string addr = payload.substr(0, pos);
-        //string port = payload.substr(pos + 1);
-
         listConnections->push_back(conn);
     }
+
     profile = profiles->createProfileIfNotExists(packet->getPayload(), conn);
     return profile;
 }
@@ -111,11 +105,10 @@ void *fromClient(void *_conn)
     pthread_exit(nullptr);
 }
 
-void *send_alive(void *_conn)
+void *sendAlive(void *_conn)
 {
     while (true)
     {
-        //cout << "Tamanho lista: " << listConnections->size() << endl;
         for (int i = 0; i < listConnections->size(); i++)
         {
             cout << i << endl;
@@ -124,7 +117,7 @@ void *send_alive(void *_conn)
     }
 }
 
-void *receive_alive(void *_conn)
+void *receiveAlive(void *_conn)
 {
     Connection *primary_conn = (Connection *)_conn;
 
@@ -146,7 +139,6 @@ void *receive_alive(void *_conn)
 
 void interruptionHandler(sig_atomic_t sigAtomic)
 {
-    //profiles->sendCloseConnToAll();
     server->close();
     exit(EXIT_SUCCESS);
 }
@@ -175,8 +167,8 @@ int main()
     routerConn->sendPacket(new Packet(CmdType::CLOSE_CONN));
     routerConn->close();
 
-    pthread_t *receiveAlive_th;
-    pthread_t *sendAlive_th;
+    pthread_t *receiveAliveTh;
+    pthread_t *sendAliveTh;
 
     if (backup)
     {
@@ -188,28 +180,25 @@ int main()
 
         cout << "Port: " << port << endl;
         cout << "Addr: " << addr << endl;
-        Connection *primary_conn = new Connection(stoi(port), addr.c_str());
-        primary_conn->sendPacket(new Packet(CmdType::SET_BACKUP, "127.0.0.1:5000"));
+        Connection *primaryConn = new Connection(stoi(port), addr.c_str());
+        primaryConn->sendPacket(new Packet(CmdType::SET_BACKUP, "127.0.0.1:5000"));
 
-        sleep(1);
-
-        receiveAlive_th = new pthread_t();
-        if (pthread_create(receiveAlive_th, NULL, receive_alive, primary_conn) != 0)
+        receiveAliveTh = new pthread_t();
+        if (pthread_create(receiveAliveTh, NULL, receiveAlive, primaryConn) != 0)
         {
             perror("pthread_create error:");
             return EXIT_FAILURE;
         }
 
-        //sleep(10000);
-        pthread_join(*receiveAlive_th, NULL);
+        pthread_join(*receiveAliveTh, NULL);
     }
 
-    cout << "Passei do if" << endl;
+    cout << "Agora sou primario" << endl;
+
     profiles = new ProfileAccessController("state.json");
     server = new Server(PORT);
-    cout << "Passei do server" << endl;
-    sendAlive_th = new pthread_t();
-    if (pthread_create(sendAlive_th, NULL, send_alive, NULL) != 0)
+    sendAliveTh = new pthread_t();
+    if (pthread_create(sendAliveTh, NULL, sendAlive, NULL) != 0)
     {
         perror("pthread_create error:");
         return EXIT_FAILURE;
@@ -217,9 +206,7 @@ int main()
 
     while (true)
     {
-        cout << "Entrei no while" << endl;
         ClientConnection *conn = server->waitClient();
-        cout << "Recebi um cliente" << endl;
         pthread_t *th = new pthread_t();
         if (pthread_create(th, NULL, fromClient, conn) != 0)
         {
