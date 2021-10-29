@@ -19,7 +19,7 @@
 
 using namespace std;
 
-void interruption_handler(sig_atomic_t sigAtomic)
+void interruptionHandler(sig_atomic_t sigAtomic)
 {
     exit(EXIT_SUCCESS);
 }
@@ -29,7 +29,7 @@ Server *server;
 string primaryServer;
 bool hasPrimary = false;
 
-void setPrimary(Packet* packet);
+void setPrimary(Packet *packet);
 
 void *from_client(void *_conn)
 {
@@ -40,50 +40,51 @@ void *from_client(void *_conn)
         Packet *packet = conn->receivePacket();
         switch (packet->getCmd())
         {
-            case CmdType::SET_PRIMARY_IF_NOT_EXISTS:
-            {
-                if (!hasPrimary)
-                {
-                    setPrimary(packet);
-                    Packet* payload = new Packet(CmdType::OK, primaryServer);
-                    conn->sendPacket(payload);
-                    hasPrimary = true;
-                }else{
-                    Packet* payload = new Packet(CmdType::SET_PRIMARY, primaryServer);
-                    conn->sendPacket(payload);
-                    cout << "Else do primary if not exists" << endl;
-                    //primario é fulano
-                    //novo servidor se conecta e vira backup
-                    //primário de tempos em tempos manda um recado dizendo que ta vivo
-                }
-
-                break;
-            }
-            case CmdType::SET_PRIMARY:
+        case CmdType::SET_PRIMARY_IF_NOT_EXISTS:
+        {
+            if (!hasPrimary)
             {
                 setPrimary(packet);
-                break;
-            }
-            case CmdType::GET_PRIMARY:
-            {   
-                
-
-                Packet* payload = new Packet(CmdType::SET_PRIMARY, primaryServer);
+                Packet *payload = new Packet(CmdType::OK, primaryServer);
                 conn->sendPacket(payload);
-                break;
+                hasPrimary = true;
             }
-            case CmdType::CLOSE_CONN:
+            else
             {
-                cout << "client wants to quit" << endl;
-                clientWantsToQuit = true;
+                Packet *payload = new Packet(CmdType::SET_PRIMARY, primaryServer);
+                conn->sendPacket(payload);
+                cout << "Else do primary if not exists" << endl;
+                //primario é fulano
+                //novo servidor se conecta e vira backup
+                //primário de tempos em tempos manda um recado dizendo que ta vivo
+            }
 
-                break;
-            }
-            default:
-            {
-                cout << "I dont know..." << endl;
-                break;
-            }
+            break;
+        }
+        case CmdType::SET_PRIMARY:
+        {
+            setPrimary(packet);
+            break;
+        }
+        case CmdType::GET_PRIMARY:
+        {
+
+            Packet *payload = new Packet(CmdType::SET_PRIMARY, primaryServer);
+            conn->sendPacket(payload);
+            break;
+        }
+        case CmdType::CLOSE_CONN:
+        {
+            cout << "client wants to quit" << endl;
+            clientWantsToQuit = true;
+
+            break;
+        }
+        default:
+        {
+            cout << "I dont know..." << endl;
+            break;
+        }
         }
     }
 
@@ -91,7 +92,8 @@ void *from_client(void *_conn)
     pthread_exit(nullptr);
 }
 
-void setPrimary(Packet* packet){
+void setPrimary(Packet *packet)
+{
     primaryServer = packet->getPayload();
     cout << "Primary server " << primaryServer << endl;
 }
@@ -110,13 +112,13 @@ void setPrimary(Packet* packet){
 //     primaryServer.sin_addr.s_addr = inet_addr(strAddr.c_str());
 
 //     memset(primaryServer.sin_zero, 0, 8);
-    
+
 //     cout << "Primary server " << "addr: " << strAddr << " port: " << strPort << endl;
 // }
 
 int main()
 {
-    signal(SIGINT, interruption_handler);
+    signal(SIGINT, interruptionHandler);
 
     server = new Server(PORT);
 

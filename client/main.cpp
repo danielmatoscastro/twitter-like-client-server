@@ -12,10 +12,10 @@ Connection *con;
 Connection *routerConn;
 string primary = "random:primary";
 
-pthread_t to_server_th;
-pthread_t from_server_th;
+pthread_t toServerTh;
+pthread_t fromServerTh;
 
-void interruption_handler(sig_atomic_t sigAtomic)
+void interruptionHandler(sig_atomic_t sigAtomic)
 {
     Packet *packet = new Packet(CmdType::CLOSE_CONN);
     con->sendPacket(packet);
@@ -23,7 +23,7 @@ void interruption_handler(sig_atomic_t sigAtomic)
     exit(EXIT_SUCCESS);
 }
 
-void send_presentation(char *profile)
+void sendPresentation(char *profile)
 {
     Packet *packet = new Packet(CmdType::PROFILE, profile);
     con->sendPacket(packet);
@@ -53,14 +53,14 @@ void updateConn()
     }
 }
 
-void *to_server(void *args)
+void *toServer(void *args)
 {
     string line;
     char *profile = (char *)args;
 
     updateConn();
 
-    send_presentation(profile);
+    sendPresentation(profile);
 
     getline(cin, line);
     while (!cin.eof())
@@ -112,7 +112,7 @@ void *to_server(void *args)
     exit(EXIT_SUCCESS);
 }
 
-void *from_server(void *args)
+void *fromServer(void *args)
 {
     updateConn();
     while (!con->isClosed())
@@ -164,13 +164,13 @@ int main(int argc, char *argv[])
 
     routerConn = new Connection(stoi(port), addr);
 
-    signal(SIGINT, interruption_handler);
+    signal(SIGINT, interruptionHandler);
 
-    pthread_create(&to_server_th, NULL, to_server, profile);
-    pthread_create(&from_server_th, NULL, from_server, NULL);
+    pthread_create(&toServerTh, NULL, toServer, profile);
+    pthread_create(&fromServerTh, NULL, fromServer, NULL);
 
-    pthread_join(to_server_th, NULL);
-    pthread_join(from_server_th, NULL);
+    pthread_join(toServerTh, NULL);
+    pthread_join(fromServerTh, NULL);
 
     return EXIT_SUCCESS;
 }
