@@ -9,9 +9,11 @@
 #define MAX_MSG_LEN 128
 
 Connection *con;
+Connection *routerConn;
+string primary = "random:primary";
+
 pthread_t to_server_th;
 pthread_t from_server_th;
-pthread_t control_thread_th;
 
 void interruption_handler(sig_atomic_t sigAtomic)
 {
@@ -21,9 +23,6 @@ void interruption_handler(sig_atomic_t sigAtomic)
     exit(EXIT_SUCCESS);
 }
 
-Connection *routerConn;
-string primary = "random:primary";
-
 void send_presentation(char *profile)
 {
     Packet *packet = new Packet(CmdType::PROFILE, profile);
@@ -32,8 +31,6 @@ void send_presentation(char *profile)
 
 void updateConn()
 {
-    cout << "hey" << endl;
-
     Packet *IP_request = new Packet(CmdType::GET_PRIMARY);
     routerConn->sendPacket(IP_request);
     Packet *Response = routerConn->receivePacket();
@@ -65,12 +62,9 @@ void *to_server(void *args)
 
     send_presentation(profile);
 
-    cout << "aqui" << endl;
     getline(cin, line);
     while (!cin.eof())
     {
-
-        cout << "oi" << endl;
         if (con == nullptr || !con->isClosed())
         {
             updateConn();
@@ -96,12 +90,14 @@ void *to_server(void *args)
                 continue;
             }
 
-            try{
+            try
+            {
                 con->sendPacket(packet);
-            }catch(...){
+            }
+            catch (...)
+            {
                 updateConn();
-                //cout << "Standard exception TO_SERVER: " << endl;
-            } 
+            }
         }
         else
         {
@@ -121,7 +117,8 @@ void *from_server(void *args)
     updateConn();
     while (!con->isClosed())
     {
-        try{
+        try
+        {
             Packet *packet = con->receivePacket();
             if (packet->getCmd() == CmdType::CLOSE_CONN)
             {
@@ -136,19 +133,15 @@ void *from_server(void *args)
                 ss << put_time(localtime(&time), "%b %d %H:%M:%S %Y");
                 cout << packet->getSender() << ": " << packet->getPayload() << " at: " << ss.str() << endl;
             }
-        }catch(...){
+        }
+        catch (...)
+        {
             //Entra aqui quando o server for desligado (simulação de um crash)
             updateConn();
-            cout << "Standard exception FROM_SERVER: " << endl;
         }
-        
     }
 
     pthread_exit(NULL);
-}
-
-void *control_thread(void *args)
-{
 }
 
 int main(int argc, char *argv[])
@@ -169,12 +162,7 @@ int main(int argc, char *argv[])
         exit(EXIT_FAILURE);
     }
 
-    cout << "ta de brinks" << endl;
-
     routerConn = new Connection(stoi(port), addr);
-    // con = new Connection(stoi(port), addr);
-
-    cout << "claro que to" << endl;
 
     signal(SIGINT, interruption_handler);
 
