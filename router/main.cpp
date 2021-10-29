@@ -25,13 +25,16 @@ void interruptionHandler(sig_atomic_t sigAtomic)
 }
 
 Server *server;
-
 string primaryServer;
 bool hasPrimary = false;
 
-void setPrimary(Packet *packet);
+void setPrimary(Packet *packet)
+{
+    primaryServer = packet->getPayload();
+    cout << "Primary server: " << primaryServer << endl;
+}
 
-void *from_client(void *_conn)
+void *fromClient(void *_conn)
 {
     ClientConnection *conn = (ClientConnection *)_conn;
     bool clientWantsToQuit = false;
@@ -53,10 +56,6 @@ void *from_client(void *_conn)
             {
                 Packet *payload = new Packet(CmdType::SET_PRIMARY, primaryServer);
                 conn->sendPacket(payload);
-                cout << "Else do primary if not exists" << endl;
-                //primario é fulano
-                //novo servidor se conecta e vira backup
-                //primário de tempos em tempos manda um recado dizendo que ta vivo
             }
 
             break;
@@ -92,30 +91,6 @@ void *from_client(void *_conn)
     pthread_exit(nullptr);
 }
 
-void setPrimary(Packet *packet)
-{
-    primaryServer = packet->getPayload();
-    cout << "Primary server " << primaryServer << endl;
-}
-
-// void setPrimary(Packet* packet){
-//     string payload = packet->getPayload();
-//     // formato "addr:port"
-//     size_t pos = payload.find(':');
-//     string strAddr = payload.substr(0, pos);
-//     string strPort = payload.substr(pos + 1);
-
-//     uint16_t port = stoi(strPort);
-
-//     primaryServer.sin_family = AF_INET;
-//     primaryServer.sin_port = htons(port);
-//     primaryServer.sin_addr.s_addr = inet_addr(strAddr.c_str());
-
-//     memset(primaryServer.sin_zero, 0, 8);
-
-//     cout << "Primary server " << "addr: " << strAddr << " port: " << strPort << endl;
-// }
-
 int main()
 {
     signal(SIGINT, interruptionHandler);
@@ -127,7 +102,7 @@ int main()
         ClientConnection *conn = server->waitClient();
 
         pthread_t *th = new pthread_t();
-        if (pthread_create(th, NULL, from_client, conn) != 0)
+        if (pthread_create(th, NULL, fromClient, conn) != 0)
         {
             perror("pthread_create error:");
             return EXIT_FAILURE;

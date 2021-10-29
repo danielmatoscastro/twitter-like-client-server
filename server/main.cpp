@@ -55,7 +55,7 @@ Profile *receiveProfileCmd(ClientConnection *conn)
     return profile;
 }
 
-void *from_client(void *_conn)
+void *fromClient(void *_conn)
 {
     ClientConnection *conn = (ClientConnection *)_conn;
     Profile *profile = receiveProfileCmd(conn);
@@ -221,7 +221,7 @@ int main()
         ClientConnection *conn = server->waitClient();
         cout << "Recebi um cliente" << endl;
         pthread_t *th = new pthread_t();
-        if (pthread_create(th, NULL, from_client, conn) != 0)
+        if (pthread_create(th, NULL, fromClient, conn) != 0)
         {
             perror("pthread_create error:");
             return EXIT_FAILURE;
