@@ -80,23 +80,19 @@ void Packet::fromBytes(char *buffer)
 
     this->cmd = (CmdType)buffer[pos];
     pos += sizeof(char);
-    //cout << this->cmd << endl;
 
     memcpy(&(this->timestamp), &buffer[pos], sizeof(this->timestamp));
     pos += sizeof(this->timestamp);
-    //cout << this->timestamp << endl;
 
     size_t payload_size;
     memcpy(&payload_size, &buffer[pos], sizeof(size_t));
     pos += sizeof(payload_size);
-    //cout << payload_size << endl;
 
     char *payload_char = new char[payload_size + 1];
     memset(payload_char, 0, payload_size + 1);
     memcpy(payload_char, &buffer[pos], payload_size);
     this->payload = string(payload_char);
-    pos+=payload_size;
-    //cout << this->payload << endl;
+    pos += payload_size;
 
     size_t sender_size;
     memcpy(&sender_size, &buffer[pos], sizeof(size_t));
@@ -106,7 +102,6 @@ void Packet::fromBytes(char *buffer)
     memset(sender_char, 0, sender_size + 1);
     memcpy(sender_char, &buffer[pos], sender_size);
     this->sender = string(sender_char);
-    //cout << this->sender << endl;
 }
 
 CmdType Packet::getCmd()

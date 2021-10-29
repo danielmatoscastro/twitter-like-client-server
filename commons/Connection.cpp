@@ -45,12 +45,15 @@ void Connection::sendMessage(const char *msg)
 char *Connection::receiveMessage()
 {
     memset(buffer_in, 0x0, PACKET_BUFFER_LEN);
-    //recv(sockfd, buffer_in, PACKET_BUFFER_LEN, 0);
+
     int retornoRecv = recv(sockfd, buffer_in, PACKET_BUFFER_LEN, 0);
-    if(retornoRecv == 0){
+    if (retornoRecv == 0)
+    {
+        // se socket retorna 0, ocorreu algum problema na conexao.
+        // possivelmente o outro lado crashou.
         throw new exception;
     }
-    //cout << "Teste recv: " << recv(sockfd, buffer_in, PACKET_BUFFER_LEN, 0) << endl;
+
     return buffer_in;
 }
 
@@ -59,6 +62,7 @@ void Connection::sendPacket(Packet *packet)
     char *buffer_temp = packet->toBytes();
     this->sendMessage(buffer_temp);
 }
+
 Packet *Connection::receivePacket()
 {
     char *buffer_temp = this->receiveMessage();
