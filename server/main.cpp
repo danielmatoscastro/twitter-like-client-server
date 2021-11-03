@@ -148,6 +148,8 @@ void *receiveAlive(void *_conn)
         {
             // Entra aqui quando o server for desligado (simulação de um crash)
             cout << "Standard exception RECEIVE_ALIVE: " << endl;
+            routerConn = new Connection(3000, "127.0.0.1");
+            routerConn->sendPacket(new Packet(CmdType::SET_PRIMARY, "127.0.0.1:4242"));
             pthread_exit(NULL);
         }
     }

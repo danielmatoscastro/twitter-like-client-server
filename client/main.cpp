@@ -31,25 +31,35 @@ void sendPresentation(char *profile)
 
 void updateConn()
 {
-    Packet *IP_request = new Packet(CmdType::GET_PRIMARY);
-    routerConn->sendPacket(IP_request);
-    Packet *Response = routerConn->receivePacket();
-
-    string payload = Response->getPayload();
-
-    if (payload.compare(primary) != 0)
+    bool retry = true;
+    while(retry)
     {
-        // formato "addr:port"
-        size_t pos = payload.find(':');
-        string addr = payload.substr(0, pos);
-        string port = payload.substr(pos + 1);
-
-        if (con)
+        try
         {
-            con->close();
-        }
+            Packet *IP_request = new Packet(CmdType::GET_PRIMARY);
+            routerConn->sendPacket(IP_request);
+            Packet *Response = routerConn->receivePacket();
 
-        con = new Connection(stoi(port), addr.c_str());
+            string payload = Response->getPayload();
+
+            if (payload.compare(primary) != 0)
+            {
+                // formato "addr:port"
+                size_t pos = payload.find(':');
+                string addr = payload.substr(0, pos);
+                string port = payload.substr(pos + 1);
+
+                if (con)
+                {
+                    con->close();
+                }
+
+                con = new Connection(stoi(port), addr.c_str());
+                retry = false;
+            }
+        }catch(...){
+            cout << "Tentando se conectar ao novo servidor primário..." << endl;
+        }
     }
 }
 
