@@ -67,15 +67,17 @@ void *toServer(void *args)
     {
         if (con == nullptr || !con->isClosed())
         {
-            updateConn();
+            // updateConn();
 
             Packet *packet;
             if (line.rfind("FOLLOW") == 0)
             {
+                cout << "sending FOLLOW" << endl;
                 packet = new Packet(CmdType::FOLLOW, line.substr(7));
             }
             else if (line.rfind("SEND") == 0)
             {
+                cout << "sending SEND" << endl;
                 string message = line.substr(5);
                 if (message.size() > MAX_MSG_LEN)
                 {
@@ -136,7 +138,7 @@ void *fromServer(void *args)
         }
         catch (...)
         {
-            //Entra aqui quando o server for desligado (simulação de um crash)
+            // Entra aqui quando o server for desligado (simulação de um crash)
             updateConn();
         }
     }

@@ -67,7 +67,6 @@ void *fromClient(void *_conn)
         }
         case CmdType::GET_PRIMARY:
         {
-
             Packet *payload = new Packet(CmdType::SET_PRIMARY, primaryServer);
             conn->sendPacket(payload);
             break;

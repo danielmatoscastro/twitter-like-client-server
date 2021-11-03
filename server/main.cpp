@@ -26,13 +26,14 @@ using namespace std;
 Connection *routerConn;
 ProfileAccessController *profiles;
 Server *server;
-vector<ClientConnection *> *listConnections;
+vector<ClientConnection *> *listBackups;
 
 Profile *receiveProfileCmd(ClientConnection *conn)
 {
-    Profile *profile;
+    Profile *profile = nullptr;
     Packet *toClient;
     Packet *packet = conn->receivePacket();
+    cout << "packet primeirao " << packet->getPayload() << endl;
     if (packet->getCmd() != CmdType::PROFILE && packet->getCmd() != CmdType::SET_BACKUP)
     {
         toClient = new Packet(CmdType::CLOSE_CONN);
@@ -42,10 +43,14 @@ Profile *receiveProfileCmd(ClientConnection *conn)
     }
     if (packet->getCmd() == CmdType::SET_BACKUP)
     {
-        listConnections->push_back(conn);
+        listBackups->push_back(conn);
     }
 
-    profile = profiles->createProfileIfNotExists(packet->getPayload(), conn);
+    if (packet->getCmd() == CmdType::PROFILE)
+    {
+        profile = profiles->createProfileIfNotExists(packet->getPayload(), conn);
+    }
+
     return profile;
 }
 
@@ -53,6 +58,11 @@ void *fromClient(void *_conn)
 {
     ClientConnection *conn = (ClientConnection *)_conn;
     Profile *profile = receiveProfileCmd(conn);
+
+    if (profile == nullptr)
+    {
+        return nullptr;
+    }
 
     Packet *hello = new Packet(CmdType::SEND, "Hello client! " + profile->getProfileId());
     conn->sendPacket(hello);
@@ -64,12 +74,16 @@ void *fromClient(void *_conn)
     bool clientWantsToQuit = false;
     while (!clientWantsToQuit && !conn->isClosed())
     {
+        cout << "entrou aqui" << endl;
         Packet *packet = conn->receivePacket();
+
+        cout << "Payload: " << packet->getPayload() << endl;
 
         switch (packet->getCmd())
         {
         case CmdType::FOLLOW:
         {
+            cout << "FOLLOW" << endl;
             profiles->addFollowerTo(packet->getPayload(), profile);
             break;
         }
@@ -97,8 +111,8 @@ void *fromClient(void *_conn)
         }
         }
 
-        Packet *yep = new Packet(CmdType::SEND, "Yep!", "server");
-        conn->sendPacket(yep);
+        // Packet *yep = new Packet(CmdType::SEND, "Yep!", "server");
+        // conn->sendPacket(yep);
     }
 
     conn->close();
@@ -109,10 +123,10 @@ void *sendAlive(void *_conn)
 {
     while (true)
     {
-        for (int i = 0; i < listConnections->size(); i++)
+        for (int i = 0; i < listBackups->size(); i++)
         {
             cout << i << endl;
-            //listConnections->at(i)->sendPacket(new Packet(CmdType::ALIVE));
+            // listConnections->at(i)->sendPacket(new Packet(CmdType::ALIVE));
         }
     }
 }
@@ -130,7 +144,7 @@ void *receiveAlive(void *_conn)
         }
         catch (...)
         {
-            //Entra aqui quando o server for desligado (simulação de um crash)
+            // Entra aqui quando o server for desligado (simulação de um crash)
             cout << "Standard exception RECEIVE_ALIVE: " << endl;
             pthread_exit(NULL);
         }
@@ -145,7 +159,7 @@ void interruptionHandler(sig_atomic_t sigAtomic)
 
 int main()
 {
-    listConnections = new vector<ClientConnection *>();
+    listBackups = new vector<ClientConnection *>();
     signal(SIGINT, interruptionHandler);
     routerConn = new Connection(3000, "127.0.0.1");
     routerConn->sendPacket(new Packet(CmdType::SET_PRIMARY_IF_NOT_EXISTS, "127.0.0.1:4242"));
