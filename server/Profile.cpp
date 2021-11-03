@@ -57,8 +57,10 @@ void Profile::decSessionsOn(ClientConnection *conn)
 void Profile::sendOrInsertInbox(Packet *packet)
 {
     pthread_mutex_lock(&m);
+    cout << "No profile" << endl;
     if (this->getSessionsOn() > 0)
     {
+        cout << "if" << endl;
         for (auto session : *this->sessions)
         {
             cout << "sending packet" << endl;
@@ -67,6 +69,7 @@ void Profile::sendOrInsertInbox(Packet *packet)
     }
     else
     {
+        cout << "else" << endl;
         this->inbox->insertPacket(packet);
     }
     pthread_mutex_unlock(&m);
@@ -80,7 +83,7 @@ void Profile::fetchInboxContent()
         Packet *packet = this->inbox->popPacket();
         for (auto session : *this->sessions)
         {
-            //send pending packet to client
+            // send pending packet to client
             session->sendPacket(packet);
         }
     }

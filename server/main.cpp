@@ -41,12 +41,12 @@ Profile *receiveProfileCmd(ClientConnection *conn)
         conn->close();
         pthread_exit(nullptr);
     }
+
     if (packet->getCmd() == CmdType::SET_BACKUP)
     {
         listBackups->push_back(conn);
     }
-
-    if (packet->getCmd() == CmdType::PROFILE)
+    else if (packet->getCmd() == CmdType::PROFILE)
     {
         profile = profiles->createProfileIfNotExists(packet->getPayload(), conn);
     }
@@ -89,12 +89,14 @@ void *fromClient(void *_conn)
         }
         case CmdType::CLOSE_CONN:
         {
+            cout << "CLOSE_CONN" << endl;
             profile->decSessionsOn(conn);
             clientWantsToQuit = true;
             break;
         }
         case CmdType::SEND:
         {
+            cout << "SEND" << endl;
             profiles->sendToFollowersOf(profile, packet);
             break;
         }

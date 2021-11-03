@@ -58,7 +58,7 @@ void *toServer(void *args)
     string line;
     char *profile = (char *)args;
 
-    updateConn();
+    // updateConn();
 
     sendPresentation(profile);
 
@@ -116,7 +116,7 @@ void *toServer(void *args)
 
 void *fromServer(void *args)
 {
-    updateConn();
+    // updateConn();
     while (!con->isClosed())
     {
         try
@@ -168,6 +168,7 @@ int main(int argc, char *argv[])
 
     signal(SIGINT, interruptionHandler);
 
+    updateConn();
     pthread_create(&toServerTh, NULL, toServer, profile);
     pthread_create(&fromServerTh, NULL, fromServer, NULL);
 
