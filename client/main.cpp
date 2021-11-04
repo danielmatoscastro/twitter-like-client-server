@@ -41,7 +41,7 @@ void updateConn()
             Packet *Response = routerConn->receivePacket();
 
             string payload = Response->getPayload();
-
+            cout << "payload: " << payload << endl;
             if (payload.compare(primary) != 0)
             {
                 // formato "addr:port"

@@ -27,6 +27,7 @@ Connection *routerConn;
 ProfileAccessController *profiles;
 Server *server;
 vector<ClientConnection *> *listBackups;
+string currentServerAddr;
 void sendToBackups(Packet *packet);
 
 Profile *receiveProfileCmd(ClientConnection *conn)
@@ -155,7 +156,11 @@ void *receiveAlive(void *_conn)
             // Entra aqui quando o server for desligado (simulação de um crash)
             cout << "Standard exception RECEIVE_ALIVE: " << endl;
             routerConn = new Connection(3000, "127.0.0.1");
-            routerConn->sendPacket(new Packet(CmdType::SET_PRIMARY, "127.0.0.1:4242"));
+            routerConn->sendPacket(new Packet(CmdType::SET_PRIMARY, currentServerAddr));
+            Packet *routerResponse = routerConn->receivePacket();
+            cout << "routerResponse: " << routerResponse->getCmd() << endl;
+            routerConn->sendPacket(new Packet(CmdType::CLOSE_CONN));
+            routerConn->close();
             pthread_exit(NULL);
         }
     }
@@ -183,12 +188,12 @@ int main(int argc, char *argv[])
     signal(SIGINT, interruptionHandler);
     routerConn = new Connection(3000, "127.0.0.1");
 
-    string addrAndPort;
-    addrAndPort.append(addr);
-    addrAndPort.append(":");
-    addrAndPort.append(port);
+    currentServerAddr.clear();
+    currentServerAddr.append(addr);
+    currentServerAddr.append(":");
+    currentServerAddr.append(port);
 
-    routerConn->sendPacket(new Packet(CmdType::SET_PRIMARY_IF_NOT_EXISTS, addrAndPort));
+    routerConn->sendPacket(new Packet(CmdType::SET_PRIMARY_IF_NOT_EXISTS, currentServerAddr));
     Packet *routerResponse = routerConn->receivePacket();
 
     bool backup = false;
@@ -221,7 +226,7 @@ int main(int argc, char *argv[])
         cout << "Port: " << port << endl;
         cout << "Addr: " << addr << endl;
         Connection *primaryConn = new Connection(stoi(port), addr.c_str());
-        primaryConn->sendPacket(new Packet(CmdType::SET_BACKUP, "127.0.0.1:5000"));
+        primaryConn->sendPacket(new Packet(CmdType::SET_BACKUP, currentServerAddr));
 
         receiveAliveTh = new pthread_t();
         if (pthread_create(receiveAliveTh, NULL, receiveAlive, primaryConn) != 0)
