@@ -27,6 +27,7 @@ Connection *routerConn;
 ProfileAccessController *profiles;
 Server *server;
 vector<ClientConnection *> *listBackups;
+void sendToBackups(Packet *packet);
 
 Profile *receiveProfileCmd(ClientConnection *conn)
 {
@@ -36,10 +37,7 @@ Profile *receiveProfileCmd(ClientConnection *conn)
     cout << "packet primeirao " << packet->getPayload() << endl;
     if (packet->getCmd() != CmdType::PROFILE && packet->getCmd() != CmdType::SET_BACKUP)
     {
-        toClient = new Packet(CmdType::CLOSE_CONN);
-        conn->sendPacket(toClient);
-        conn->close();
-        pthread_exit(nullptr);
+        profile = profiles->getProfileById(packet->getSender());
     }
 
     if (packet->getCmd() == CmdType::SET_BACKUP)
@@ -49,9 +47,16 @@ Profile *receiveProfileCmd(ClientConnection *conn)
     else if (packet->getCmd() == CmdType::PROFILE)
     {
         profile = profiles->createProfileIfNotExists(packet->getPayload(), conn);
+        sendToBackups(packet);
     }
 
     return profile;
+}
+
+void sendToBackups(Packet * packet){
+    /*for(int i = 0; i < listBackups->size(); i++){
+        listBackups->at(i)->sendPacket(packet);
+    }*/
 }
 
 void *fromClient(void *_conn)
@@ -85,6 +90,7 @@ void *fromClient(void *_conn)
         {
             cout << "FOLLOW" << endl;
             profiles->addFollowerTo(packet->getPayload(), profile);
+            sendToBackups(packet);
             break;
         }
         case CmdType::CLOSE_CONN:
@@ -161,12 +167,28 @@ void interruptionHandler(sig_atomic_t sigAtomic)
     exit(EXIT_SUCCESS);
 }
 
-int main()
+int main(int argc, char *argv[])
 {
+    if (argc < 3)
+    {
+        cout << "too few arguments" << endl;
+        exit(EXIT_FAILURE);
+    }
+
+    char *addr = argv[1];
+    char *port = argv[2];
+
+
     listBackups = new vector<ClientConnection *>();
     signal(SIGINT, interruptionHandler);
     routerConn = new Connection(3000, "127.0.0.1");
-    routerConn->sendPacket(new Packet(CmdType::SET_PRIMARY_IF_NOT_EXISTS, "127.0.0.1:4242"));
+
+    string addrAndPort;
+    addrAndPort.append(addr);
+    addrAndPort.append(":");
+    addrAndPort.append(port);
+
+    routerConn->sendPacket(new Packet(CmdType::SET_PRIMARY_IF_NOT_EXISTS, addrAndPort));
     Packet *routerResponse = routerConn->receivePacket();
 
     bool backup = false;
@@ -214,7 +236,7 @@ int main()
     cout << "Agora sou primario" << endl;
 
     profiles = new ProfileAccessController("state.json");
-    server = new Server(PORT);
+    server = new Server(stoi(port));
     sendAliveTh = new pthread_t();
     if (pthread_create(sendAliveTh, NULL, sendAlive, NULL) != 0)
     {
