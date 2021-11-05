@@ -55,9 +55,10 @@ Profile *receiveProfileCmd(ClientConnection *conn)
 }
 
 void sendToBackups(Packet * packet){
-    /*for(int i = 0; i < listBackups->size(); i++){
+    for (int i = 0; i < listBackups->size(); i++) {
+        cout << "enviando para backup" << endl;
         listBackups->at(i)->sendPacket(packet);
-    }*/
+    }
 }
 
 void *fromClient(void *_conn)

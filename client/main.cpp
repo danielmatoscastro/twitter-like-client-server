@@ -15,6 +15,8 @@ string primary = "random:primary";
 pthread_t toServerTh;
 pthread_t fromServerTh;
 
+bool isDed = false;
+
 void interruptionHandler(sig_atomic_t sigAtomic)
 {
     Packet *packet = new Packet(CmdType::CLOSE_CONN);
@@ -29,38 +31,50 @@ void sendPresentation(char *profile)
     con->sendPacket(packet);
 }
 
+pthread_mutex_t updateMutex = PTHREAD_MUTEX_INITIALIZER;
+
 void updateConn()
 {
-    bool retry = true;
-    while(retry)
+    pthread_mutex_lock(&updateMutex);
+    
+    Packet *IP_request = new Packet(CmdType::GET_PRIMARY);
+    routerConn->sendPacket(IP_request);
+    Packet *Response = routerConn->receivePacket();
+
+    string payload = Response->getPayload();
+    cout << "payload: " << payload << endl;
+    cout << "primary: " << primary << endl;
+    cout <<  payload.compare(primary) << endl;
+    if (payload.compare(primary) != 0)
     {
-        try
+        primary = payload;
+        cout << "entrei" << endl;
+        cout << "payload: " << payload << endl;
+        cout << "primary: " << primary << endl;
+        // formato "addr:port"
+        size_t pos = payload.find(':');
+        string addr = payload.substr(0, pos);
+        string port = payload.substr(pos + 1);
+
+        if (con)
         {
-            Packet *IP_request = new Packet(CmdType::GET_PRIMARY);
-            routerConn->sendPacket(IP_request);
-            Packet *Response = routerConn->receivePacket();
-
-            string payload = Response->getPayload();
-            cout << "payload: " << payload << endl;
-            if (payload.compare(primary) != 0)
-            {
-                // formato "addr:port"
-                size_t pos = payload.find(':');
-                string addr = payload.substr(0, pos);
-                string port = payload.substr(pos + 1);
-
-                if (con)
-                {
-                    con->close();
-                }
-
+            con->close();
+        }
+        cout << "port: " << port << endl;
+       
+        bool retry = true;
+        while (retry) {
+            try {
                 con = new Connection(stoi(port), addr.c_str());
                 retry = false;
+            } catch (...) {
+                cout << "Tentando se conectar ao novo servidor primário..." << endl;
             }
-        }catch(...){
-            cout << "Tentando se conectar ao novo servidor primário..." << endl;
         }
+        
+        cout << "vou sair" << endl;
     }
+    pthread_mutex_unlock(&updateMutex);
 }
 
 void *toServer(void *args)
@@ -108,6 +122,7 @@ void *toServer(void *args)
             }
             catch (...)
             {
+                isDed = true;
                 updateConn();
             }
         }
@@ -126,7 +141,6 @@ void *toServer(void *args)
 
 void *fromServer(void *args)
 {
-    // updateConn();
     while (!con->isClosed())
     {
         try
@@ -178,6 +192,7 @@ int main(int argc, char *argv[])
 
     signal(SIGINT, interruptionHandler);
 
+    isDed = true;
     updateConn();
     pthread_create(&toServerTh, NULL, toServer, profile);
     pthread_create(&fromServerTh, NULL, fromServer, NULL);
