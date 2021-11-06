@@ -10,17 +10,17 @@
 
 Connection *con;
 Connection *routerConn;
+char* profile;
 string primary = "random:primary";
 
 pthread_t toServerTh;
 pthread_t fromServerTh;
 
 void interruptionHandler(sig_atomic_t sigAtomic)
-{
-    Packet *packet = new Packet(CmdType::CLOSE_CONN);
-    con->sendPacket(packet);
-    con->close();
-    exit(EXIT_SUCCESS);
+{   
+    //kill to avoid useless threads running   
+    pthread_kill(toServerTh,SIGKILL);
+    pthread_kill(fromServerTh,SIGKILL);
 }
 
 void sendPresentation(char *profile)
@@ -179,7 +179,7 @@ int main(int argc, char *argv[])
         exit(EXIT_FAILURE);
     }
 
-    char *profile = argv[1];
+    profile = argv[1];
     char *addr = argv[2];
     char *port = argv[3];
 
@@ -199,6 +199,13 @@ int main(int argc, char *argv[])
 
     pthread_join(toServerTh, NULL);
     pthread_join(fromServerTh, NULL);
+
+    std::string prof = std::string(profile);
+    Packet *packet = new Packet(CmdType::CLOSE_CONN,"",prof);
+    con->sendPacket(packet);
+    con->close();
+    routerConn->sendPacket(packet);
+    routerConn->close();
 
     return EXIT_SUCCESS;
 }

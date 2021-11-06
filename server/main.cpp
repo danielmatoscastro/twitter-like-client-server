@@ -67,7 +67,7 @@ bool processPacket(ClientConnection *conn, Profile *profile, Packet *packet)
 {
     bool clientWantsToQuit = false;
 
-    cout << "processPacket" << endl;
+    // cout << "processPacket" << endl;
     switch (packet->getCmd())
     {
     case CmdType::PROFILE:
@@ -88,12 +88,14 @@ bool processPacket(ClientConnection *conn, Profile *profile, Packet *packet)
         cout << "CLOSE_CONN" << endl;
         profile->decSessionsOn(conn);
         clientWantsToQuit = true;
+        sendToBackups(packet);
         break;
     }
     case CmdType::SEND:
     {
         cout << "SEND" << endl;
         profiles->sendToFollowersOf(profile, packet);
+        sendToBackups(packet);
         break;
     }
     case CmdType::ALIVE:
@@ -103,8 +105,8 @@ bool processPacket(ClientConnection *conn, Profile *profile, Packet *packet)
     }
     default:
     {
-        cout << "Print getcmd: " << packet->getCmd() << endl;
-        cout << "I dont know..." << endl;
+        // cout << "Print getcmd: " << packet->getCmd() << endl;
+        // cout << "I dont know..." << endl;
         break;
     }
     }
@@ -132,10 +134,10 @@ void *fromClient(void *_conn)
     bool clientWantsToQuit = false;
     while (!clientWantsToQuit && !conn->isClosed())
     {
-        cout << "entrou aqui" << endl;
+        // cout << "entrou aqui" << endl;
         Packet *packet = conn->receivePacket();
 
-        cout << "Payload: " << packet->getPayload() << endl;
+        // cout << "Payload: " << packet->getPayload() << endl;
 
         clientWantsToQuit = processPacket(conn, profile, packet);
 
