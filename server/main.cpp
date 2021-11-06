@@ -54,11 +54,62 @@ Profile *receiveProfileCmd(ClientConnection *conn)
     return profile;
 }
 
-void sendToBackups(Packet * packet){
-    for (int i = 0; i < listBackups->size(); i++) {
+void sendToBackups(Packet *packet)
+{
+    for (int i = 0; i < listBackups->size(); i++)
+    {
         cout << "enviando para backup" << endl;
         listBackups->at(i)->sendPacket(packet);
     }
+}
+
+bool processPacket(ClientConnection *conn, Profile *profile, Packet *packet)
+{
+    bool clientWantsToQuit = false;
+
+    cout << "processPacket" << endl;
+    switch (packet->getCmd())
+    {
+    case CmdType::PROFILE:
+    {
+        profiles->createProfileIfNotExists(packet->getPayload(), conn);
+        sendToBackups(packet);
+        break;
+    }
+    case CmdType::FOLLOW:
+    {
+        cout << "FOLLOW" << endl;
+        profiles->addFollowerTo(packet->getPayload(), profile);
+        sendToBackups(packet);
+        break;
+    }
+    case CmdType::CLOSE_CONN:
+    {
+        cout << "CLOSE_CONN" << endl;
+        profile->decSessionsOn(conn);
+        clientWantsToQuit = true;
+        break;
+    }
+    case CmdType::SEND:
+    {
+        cout << "SEND" << endl;
+        profiles->sendToFollowersOf(profile, packet);
+        break;
+    }
+    case CmdType::ALIVE:
+    {
+        cout << "Vivo" << endl;
+        break;
+    }
+    default:
+    {
+        cout << "Print getcmd: " << packet->getCmd() << endl;
+        cout << "I dont know..." << endl;
+        break;
+    }
+    }
+
+    return clientWantsToQuit;
 }
 
 void *fromClient(void *_conn)
@@ -86,40 +137,7 @@ void *fromClient(void *_conn)
 
         cout << "Payload: " << packet->getPayload() << endl;
 
-        switch (packet->getCmd())
-        {
-        case CmdType::FOLLOW:
-        {
-            cout << "FOLLOW" << endl;
-            profiles->addFollowerTo(packet->getPayload(), profile);
-            sendToBackups(packet);
-            break;
-        }
-        case CmdType::CLOSE_CONN:
-        {
-            cout << "CLOSE_CONN" << endl;
-            profile->decSessionsOn(conn);
-            clientWantsToQuit = true;
-            break;
-        }
-        case CmdType::SEND:
-        {
-            cout << "SEND" << endl;
-            profiles->sendToFollowersOf(profile, packet);
-            break;
-        }
-        case CmdType::ALIVE:
-        {
-            cout << "Vivo" << endl;
-            break;
-        }
-        default:
-        {
-            cout << "Print getcmd: " << packet->getCmd() << endl;
-            cout << "I dont know..." << endl;
-            break;
-        }
-        }
+        clientWantsToQuit = processPacket(conn, profile, packet);
 
         // Packet *yep = new Packet(CmdType::SEND, "Yep!", "server");
         // conn->sendPacket(yep);
@@ -150,7 +168,10 @@ void *receiveAlive(void *_conn)
         try
         {
             Packet *packet = primary_conn->receivePacket();
-            cout << "Dentro do receive alive" << endl;
+            cout << packet->getCmd() << " " << packet->getPayload() << endl;
+            Profile *profile = profiles->getProfileById(packet->getSender());
+            cout << "chamando processPacket " << profile << " sender:" << packet->getSender() << endl;
+            processPacket(nullptr, profile, packet);
         }
         catch (...)
         {
@@ -184,7 +205,7 @@ int main(int argc, char *argv[])
     char *addr = argv[1];
     char *port = argv[2];
 
-
+    profiles = new ProfileAccessController("state.json");
     listBackups = new vector<ClientConnection *>();
     signal(SIGINT, interruptionHandler);
     routerConn = new Connection(3000, "127.0.0.1");
@@ -241,7 +262,6 @@ int main(int argc, char *argv[])
 
     cout << "Agora sou primario" << endl;
 
-    profiles = new ProfileAccessController("state.json");
     server = new Server(stoi(port));
     sendAliveTh = new pthread_t();
     if (pthread_create(sendAliveTh, NULL, sendAlive, NULL) != 0)

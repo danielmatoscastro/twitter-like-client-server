@@ -15,8 +15,6 @@ string primary = "random:primary";
 pthread_t toServerTh;
 pthread_t fromServerTh;
 
-bool isDed = false;
-
 void interruptionHandler(sig_atomic_t sigAtomic)
 {
     Packet *packet = new Packet(CmdType::CLOSE_CONN);
@@ -36,7 +34,7 @@ pthread_mutex_t updateMutex = PTHREAD_MUTEX_INITIALIZER;
 void updateConn()
 {
     pthread_mutex_lock(&updateMutex);
-    
+
     Packet *IP_request = new Packet(CmdType::GET_PRIMARY);
     routerConn->sendPacket(IP_request);
     Packet *Response = routerConn->receivePacket();
@@ -44,7 +42,7 @@ void updateConn()
     string payload = Response->getPayload();
     cout << "payload: " << payload << endl;
     cout << "primary: " << primary << endl;
-    cout <<  payload.compare(primary) << endl;
+    cout << payload.compare(primary) << endl;
     if (payload.compare(primary) != 0)
     {
         primary = payload;
@@ -61,17 +59,21 @@ void updateConn()
             con->close();
         }
         cout << "port: " << port << endl;
-       
+
         bool retry = true;
-        while (retry) {
-            try {
+        while (retry)
+        {
+            try
+            {
                 con = new Connection(stoi(port), addr.c_str());
                 retry = false;
-            } catch (...) {
+            }
+            catch (...)
+            {
                 cout << "Tentando se conectar ao novo servidor primário..." << endl;
             }
         }
-        
+
         cout << "vou sair" << endl;
     }
     pthread_mutex_unlock(&updateMutex);
@@ -97,7 +99,7 @@ void *toServer(void *args)
             if (line.rfind("FOLLOW") == 0)
             {
                 cout << "sending FOLLOW" << endl;
-                packet = new Packet(CmdType::FOLLOW, line.substr(7));
+                packet = new Packet(CmdType::FOLLOW, line.substr(7), profile);
             }
             else if (line.rfind("SEND") == 0)
             {
@@ -122,7 +124,6 @@ void *toServer(void *args)
             }
             catch (...)
             {
-                isDed = true;
                 updateConn();
             }
         }
@@ -192,7 +193,6 @@ int main(int argc, char *argv[])
 
     signal(SIGINT, interruptionHandler);
 
-    isDed = true;
     updateConn();
     pthread_create(&toServerTh, NULL, toServer, profile);
     pthread_create(&fromServerTh, NULL, fromServer, NULL);

@@ -9,7 +9,7 @@ ProfilesManager::ProfilesManager(string jsonFilename)
 {
     this->jsonFilename = jsonFilename;
     this->profiles = new map<string, Profile *>();
-    this->fromJsonFile();
+    //this->fromJsonFile();
 }
 
 bool ProfilesManager::insertProfile(string profileId, Profile *profile)
@@ -25,6 +25,7 @@ bool ProfilesManager::insertProfile(string profileId, Profile *profile)
 
     return !isInMap;
 }
+
 Profile *ProfilesManager::getProfileById(string profileId)
 {
     auto it = profiles->find(profileId);
@@ -46,12 +47,15 @@ bool ProfilesManager::hasProfile(string profileId)
 
 void ProfilesManager::addFollowerTo(string followed, Profile *follower)
 {
+    cout << "addFollowerTo" << endl;
 
     if (follower->getProfileId() == followed)
     {
+        cout << "entrei no if" << endl;
         return;
     }
 
+    cout << "passei do if" << endl;
     cout << follower->getProfileId() << " wants to follow " << followed << endl;
 
     Profile *profileToFollow = this->getProfileById(followed);
@@ -136,6 +140,7 @@ void ProfilesManager::sendToFollowersOf(Profile *profile, Packet *packet)
 
 Profile *ProfilesManager::createProfileIfNotExists(string profileId, ClientConnection *conn)
 {
+    cout << "createProfileIfNotExists" << endl;
     Profile *profile = this->getProfileById(profileId);
     if (profile != nullptr)
     {
@@ -150,6 +155,7 @@ Profile *ProfilesManager::createProfileIfNotExists(string profileId, ClientConne
     }
     else
     {
+        cout << "else" << endl;
         profile = new Profile(profileId);
         this->insertProfile(profileId, profile);
         cout << "Profile " << profileId << " was created." << endl;
