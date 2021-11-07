@@ -19,12 +19,6 @@ pthread_t fromServerTh;
 void interruptionHandler(sig_atomic_t sigAtomic)
 {
     cout << "sigkill" << endl;
-    //kill to avoid useless threads running
-    pthread_kill(toServerTh, SIGKILL);
-    pthread_kill(fromServerTh, SIGKILL);
-
-    pthread_join(toServerTh, NULL);
-    pthread_join(fromServerTh, NULL);
 
     std::string prof = std::string(profile);
     Packet *packet = new Packet(CmdType::CLOSE_CONN, "", prof);
@@ -33,6 +27,17 @@ void interruptionHandler(sig_atomic_t sigAtomic)
     cout << "sending close packet to router" << endl;
     routerConn->sendPacket(packet);
     routerConn->close();
+
+    //kill to avoid useless threads running
+    pthread_kill(toServerTh, SIGKILL);
+    pthread_kill(fromServerTh, SIGKILL);
+
+    //pthread_cancel(toServerTh);
+    //pthread_cancel(fromServerTh);
+
+    
+
+    cout << "Depois do join INTERRUPTION HANDLER" << endl;
 }
 
 void sendPresentation(char *profile)
@@ -208,6 +213,11 @@ int main(int argc, char *argv[])
     updateConn();
     pthread_create(&toServerTh, NULL, toServer, profile);
     pthread_create(&fromServerTh, NULL, fromServer, NULL);
+
+    pthread_join(toServerTh, NULL);
+    pthread_join(fromServerTh, NULL);
+
+    cout << "Depois do join" << endl;
 
     return EXIT_SUCCESS;
 }

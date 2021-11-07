@@ -40,51 +40,57 @@ void *fromClient(void *_conn)
     bool clientWantsToQuit = false;
     while (!clientWantsToQuit)
     {
-        Packet *packet = conn->receivePacket();
+        Packet *packet;
+        try{
+            packet = conn->receivePacket();
+        }catch(...){
+            pthread_exit(EXIT_SUCCESS);
+        }
+        
         switch (packet->getCmd())
         {
-        case CmdType::SET_PRIMARY_IF_NOT_EXISTS:
-        {
-            if (!hasPrimary)
+            case CmdType::SET_PRIMARY_IF_NOT_EXISTS:
+            {
+                if (!hasPrimary)
+                {
+                    setPrimary(packet);
+                    Packet *payload = new Packet(CmdType::OK, primaryServer);
+                    conn->sendPacket(payload);
+                    hasPrimary = true;
+                }
+                else
+                {
+                    Packet *payload = new Packet(CmdType::SET_PRIMARY, primaryServer);
+                    conn->sendPacket(payload);
+                }
+
+                break;
+            }
+            case CmdType::SET_PRIMARY:
             {
                 setPrimary(packet);
                 Packet *payload = new Packet(CmdType::OK, primaryServer);
                 conn->sendPacket(payload);
-                hasPrimary = true;
+                break;
             }
-            else
+            case CmdType::GET_PRIMARY:
             {
                 Packet *payload = new Packet(CmdType::SET_PRIMARY, primaryServer);
                 conn->sendPacket(payload);
+                break;
             }
+            case CmdType::CLOSE_CONN:
+            {
+                cout << "client wants to quit" << endl;
+                clientWantsToQuit = true;
 
-            break;
-        }
-        case CmdType::SET_PRIMARY:
-        {
-            setPrimary(packet);
-            Packet *payload = new Packet(CmdType::OK, primaryServer);
-            conn->sendPacket(payload);
-            break;
-        }
-        case CmdType::GET_PRIMARY:
-        {
-            Packet *payload = new Packet(CmdType::SET_PRIMARY, primaryServer);
-            conn->sendPacket(payload);
-            break;
-        }
-        case CmdType::CLOSE_CONN:
-        {
-            cout << "client wants to quit" << endl;
-            clientWantsToQuit = true;
-
-            break;
-        }
-        default:
-        {
-            cout << "I dont know..." << endl;
-            break;
-        }
+                break;
+            }
+            default:
+            {
+                cout << "I dont know..." << endl;
+                break;
+            }
         }
     }
 

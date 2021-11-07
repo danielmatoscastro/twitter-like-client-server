@@ -63,8 +63,10 @@ void Profile::sendOrInsertInbox(Packet *packet)
         cout << "if" << endl;
         for (auto session : *this->sessions)
         {
-            cout << "sending packet" << endl;
-            session->sendPacket(packet);
+            if(session != NULL){
+                cout << "sending packet" << endl;
+                session->sendPacket(packet);    
+            }
         }
     }
     else
