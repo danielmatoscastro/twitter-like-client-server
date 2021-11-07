@@ -10,17 +10,29 @@
 
 Connection *con;
 Connection *routerConn;
-char* profile;
+char *profile;
 string primary = "random:primary";
 
 pthread_t toServerTh;
 pthread_t fromServerTh;
 
 void interruptionHandler(sig_atomic_t sigAtomic)
-{   
-    //kill to avoid useless threads running   
-    pthread_kill(toServerTh,SIGKILL);
-    pthread_kill(fromServerTh,SIGKILL);
+{
+    cout << "sigkill" << endl;
+    //kill to avoid useless threads running
+    pthread_kill(toServerTh, SIGKILL);
+    pthread_kill(fromServerTh, SIGKILL);
+
+    pthread_join(toServerTh, NULL);
+    pthread_join(fromServerTh, NULL);
+
+    std::string prof = std::string(profile);
+    Packet *packet = new Packet(CmdType::CLOSE_CONN, "", prof);
+    con->sendPacket(packet);
+    con->close();
+    cout << "sending close packet to router" << endl;
+    routerConn->sendPacket(packet);
+    routerConn->close();
 }
 
 void sendPresentation(char *profile)
@@ -158,7 +170,7 @@ void *fromServer(void *args)
                 stringstream ss;
                 time_t time = packet->getTimestamp();
                 ss << put_time(localtime(&time), "%d/%m/%Y %H:%M ");
-                cout << "(" << ss.str() << ") "  << packet->getSender() << ": " << packet->getPayload() << endl;
+                cout << "(" << ss.str() << ") " << packet->getSender() << ": " << packet->getPayload() << endl;
             }
         }
         catch (...)
@@ -196,16 +208,6 @@ int main(int argc, char *argv[])
     updateConn();
     pthread_create(&toServerTh, NULL, toServer, profile);
     pthread_create(&fromServerTh, NULL, fromServer, NULL);
-
-    pthread_join(toServerTh, NULL);
-    pthread_join(fromServerTh, NULL);
-
-    std::string prof = std::string(profile);
-    Packet *packet = new Packet(CmdType::CLOSE_CONN,"",prof);
-    con->sendPacket(packet);
-    con->close();
-    routerConn->sendPacket(packet);
-    routerConn->close();
 
     return EXIT_SUCCESS;
 }

@@ -22,7 +22,6 @@ Connection::Connection(uint16_t port, const char *server_addr)
 
     if (connect(sockfd, (struct sockaddr *)&server, len) == -1)
     {
-        cout << "oi" << endl;
         throw new exception;
     }
 
