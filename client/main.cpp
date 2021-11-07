@@ -157,8 +157,8 @@ void *fromServer(void *args)
             {
                 stringstream ss;
                 time_t time = packet->getTimestamp();
-                ss << put_time(localtime(&time), "%b %d %H:%M:%S %Y");
-                cout << packet->getSender() << ": " << packet->getPayload() << " at: " << ss.str() << endl;
+                ss << put_time(localtime(&time), "%d/%m/%Y %H:%M ");
+                cout << "(" << ss.str() << ") "  << packet->getSender() << ": " << packet->getPayload() << endl;
             }
         }
         catch (...)
