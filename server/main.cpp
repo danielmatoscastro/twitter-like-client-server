@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <errno.h>
+#include <sstream>
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -27,8 +28,21 @@ Connection *routerConn;
 ProfileAccessController *profiles;
 Server *server;
 vector<ClientConnection *> *listBackups;
+vector<string> *electionServerList ;
 string currentServerAddr;
 void sendToBackups(Packet *packet);
+
+string serverListToString(){
+    string result;
+    result.clear();
+
+    for (auto str : *electionServerList){
+        result.append(str);
+        result.append("\n");
+    }
+
+    return result;
+}
 
 Profile *receiveProfileCmd(ClientConnection *conn)
 {
@@ -44,6 +58,8 @@ Profile *receiveProfileCmd(ClientConnection *conn)
     if (packet->getCmd() == CmdType::SET_BACKUP)
     {
         listBackups->push_back(conn);
+        electionServerList->push_back(packet->getPayload());
+        sendToBackups(new Packet(CmdType::BACKUP_PROPAGATION, serverListToString()));
     }
     else if (packet->getCmd() == CmdType::PROFILE)
     {
@@ -101,6 +117,18 @@ bool processPacket(ClientConnection *conn, Profile *profile, Packet *packet)
     case CmdType::ALIVE:
     {
         cout << "Vivo" << endl;
+        break;
+    }
+    case CmdType::BACKUP_PROPAGATION:
+    {   
+        std::string strData = packet->getPayload();
+        std::stringstream streamData(strData);     
+        std::string val;
+        electionServerList->clear();
+        while (std::getline(streamData, val)) {
+            electionServerList->push_back(val);
+        }
+        cout << "ElectionList propagated:\n" << packet->getPayload() << endl;
         break;
     }
     default:
@@ -209,6 +237,7 @@ int main(int argc, char *argv[])
 
     profiles = new ProfileAccessController("state.json");
     listBackups = new vector<ClientConnection *>();
+    electionServerList = new vector<string>();
     signal(SIGINT, interruptionHandler);
     routerConn = new Connection(3000, "127.0.0.1");
 
