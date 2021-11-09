@@ -19,7 +19,9 @@ enum CmdType
     SET_BACKUP = 8,
     ALIVE = 9,
     OK = 10,
-    BACKUP_PROPAGATION = 11
+    BACKUP_PROPAGATION = 11,
+    ELECTION = 12,
+    ELECTED = 13
 };
 
 class Packet

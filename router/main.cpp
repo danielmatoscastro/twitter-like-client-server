@@ -27,6 +27,7 @@ void interruptionHandler(sig_atomic_t sigAtomic)
 Server *server;
 string primaryServer;
 bool hasPrimary = false;
+pthread_mutex_t m = PTHREAD_MUTEX_INITIALIZER;
 
 void setPrimary(Packet *packet)
 {
@@ -51,6 +52,7 @@ void *fromClient(void *_conn)
         {
             case CmdType::SET_PRIMARY_IF_NOT_EXISTS:
             {
+                pthread_mutex_lock(&m);
                 if (!hasPrimary)
                 {
                     setPrimary(packet);
@@ -63,7 +65,7 @@ void *fromClient(void *_conn)
                     Packet *payload = new Packet(CmdType::SET_PRIMARY, primaryServer);
                     conn->sendPacket(payload);
                 }
-
+                pthread_mutex_unlock(&m);
                 break;
             }
             case CmdType::SET_PRIMARY:

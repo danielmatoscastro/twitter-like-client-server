@@ -20,7 +20,7 @@
 #include "Profile.h"
 #include "ProfileAccessController.h"
 
-#define PORT 4242
+//#define PORT 4242
 
 using namespace std;
 
@@ -28,8 +28,11 @@ Connection *routerConn;
 ProfileAccessController *profiles;
 Server *server;
 vector<ClientConnection *> *listBackups;
-vector<string> *electionServerList ;
+vector<string> *electionServerList;
 string currentServerAddr;
+bool electionStarted = false;
+bool backup = false;
+
 void sendToBackups(Packet *packet);
 
 string serverListToString(){
@@ -76,6 +79,36 @@ void sendToBackups(Packet *packet)
     {
         cout << "enviando para backup" << endl;
         listBackups->at(i)->sendPacket(packet);
+    }
+}
+
+void sendElectionMsg(string serverAddr){
+    electionStarted = true;
+    auto itr = std::find(electionServerList->begin(), electionServerList->end(), currentServerAddr);
+
+    int index=0;
+    if (itr != electionServerList->cend()) {
+        index = itr - electionServerList->cbegin();// index = std::distance(electionServerList->begin(), itr);
+        std::cout << "Element present at index " << index;
+
+        //send to next server in the ring
+        int nextServer = (index+1)%electionServerList->size();
+
+        string addrAndPort = electionServerList->at(nextServer);
+
+        size_t pos = addrAndPort.find(':');
+        string addr = addrAndPort.substr(0, pos);
+        string port = addrAndPort.substr(pos + 1);
+
+        Connection *nextElectionServer = new Connection(stoi(port), addr.c_str());
+        Packet *electionPacket = new Packet(CmdType::ELECTION, serverAddr);
+        nextElectionServer->sendPacket(electionPacket);
+        
+        nextElectionServer->sendPacket(new Packet(CmdType::CLOSE_CONN, ""));
+        nextElectionServer->close();
+    }
+    else{
+        std::cout << "Element not found" << endl;
     }
 }
 
@@ -129,6 +162,111 @@ bool processPacket(ClientConnection *conn, Profile *profile, Packet *packet)
             electionServerList->push_back(val);
         }
         cout << "ElectionList propagated:\n" << packet->getPayload() << endl;
+        break;
+    }
+    case CmdType::ELECTION:
+    {
+        int idComp = strcmp(packet->getPayload().c_str(), currentServerAddr.c_str());
+
+        //if msg id > id -> send; electionStarted
+        //else msg id < id && !electionStarted; -> send(id); electionStarted
+        //else msg id < id && electionStarted -> do nothing
+        //else msg id = id -> isPrimary = true;
+
+        if(idComp > 0){
+            sendElectionMsg(packet->getPayload());
+        }
+        else if(idComp < 0 && !electionStarted){
+            sendElectionMsg(currentServerAddr);
+        }
+        else if(idComp == 0){ // if msg id == current server id => server was elected as primary
+
+            electionStarted = false;
+
+            auto itr = std::find(electionServerList->begin(), electionServerList->end(), currentServerAddr);
+            int index=0;
+            if (itr != electionServerList->cend()) {
+                index = itr - electionServerList->cbegin(); //index = std::distance(electionServerList->begin(), itr);
+                std::cout << "(In if(is Primary)) Element present at index " << index;
+            
+
+                //remove the current primary server from the list
+                electionServerList->erase(itr);
+                
+                cout << "Standard exception RECEIVE_ALIVE: " << endl;
+                routerConn = new Connection(3000, "127.0.0.1");
+                routerConn->sendPacket(new Packet(CmdType::SET_PRIMARY, currentServerAddr));
+                Packet *routerResponse = routerConn->receivePacket();
+                cout << "routerResponse: " << routerResponse->getCmd() << endl;
+                routerConn->sendPacket(new Packet(CmdType::CLOSE_CONN));
+                routerConn->close();
+
+
+                //send elected message to next server in the ring
+                int nextServer = (index+1)%electionServerList->size();
+
+                string addrAndPort = electionServerList->at(nextServer);
+
+                size_t pos = addrAndPort.find(':');
+                string addr = addrAndPort.substr(0, pos);
+                string port = addrAndPort.substr(pos + 1);
+
+                Connection *nextElectionServer = new Connection(stoi(port), addr.c_str());
+                Packet *electedPacket = new Packet(CmdType::ELECTED, currentServerAddr);
+                nextElectionServer->sendPacket(electedPacket);
+
+                nextElectionServer->sendPacket(new Packet(CmdType::CLOSE_CONN, ""));
+                nextElectionServer->close();
+            }              
+            else {
+                std::cout << "(In if(is Primary)) Element not found";
+            }
+        }
+
+        break;
+    }
+    case CmdType::ELECTED:
+    {
+        int idComp = strcmp(packet->getPayload().c_str(), currentServerAddr.c_str());
+
+
+        if(idComp != 0){
+            electionStarted = false;
+
+            auto itr = std::find(electionServerList->begin(), electionServerList->end(), currentServerAddr);
+            int index=0;
+            if (itr != electionServerList->cend()) {
+                index = itr - electionServerList->cbegin(); //index = std::distance(electionServerList->begin(), itr);
+                std::cout << "(In if(is Primary)) Element present at index " << index;
+
+
+                //send elected message to next server in the ring
+                int nextServer = (index+1)%electionServerList->size();
+
+                string addrAndPort = electionServerList->at(nextServer);
+
+                size_t pos = addrAndPort.find(':');
+                string addr = addrAndPort.substr(0, pos);
+                string port = addrAndPort.substr(pos + 1);
+
+                Connection *nextElectionServer = new Connection(stoi(port), addr.c_str());
+                Packet *electedPacket = new Packet(CmdType::ELECTED, currentServerAddr);
+                nextElectionServer->sendPacket(electedPacket);
+
+                nextElectionServer->sendPacket(new Packet(CmdType::CLOSE_CONN, ""));
+                nextElectionServer->close();
+
+                backup = true;
+
+            }              
+            else {
+                std::cout << "(In if(is Primary)) Element not found";
+            }
+        }
+        else{
+            backup = false;
+        }
+
         break;
     }
     default:
@@ -206,13 +344,42 @@ void *receiveAlive(void *_conn)
         catch (...)
         {
             // Entra aqui quando o server for desligado (simulação de um crash)
-            cout << "Standard exception RECEIVE_ALIVE: " << endl;
-            routerConn = new Connection(3000, "127.0.0.1");
-            routerConn->sendPacket(new Packet(CmdType::SET_PRIMARY, currentServerAddr));
-            Packet *routerResponse = routerConn->receivePacket();
-            cout << "routerResponse: " << routerResponse->getCmd() << endl;
-            routerConn->sendPacket(new Packet(CmdType::CLOSE_CONN));
-            routerConn->close();
+            cout << "Entrou no catch" << endl;
+            // Se está em processo de/começou a eleição => ignora outras eleiçẽos iniciadas a seguir
+            if(!electionStarted){
+                electionStarted = true;
+
+                cout << "Entrei no if" << endl;
+                //find current server in electionServerList
+                auto itr = std::find(electionServerList->begin(), electionServerList->end(), currentServerAddr);
+                cout << "Passou iterator" << endl;
+                int index = 0;
+                if (itr != electionServerList->end()) {
+                    cout << "entrou no if 3" << endl;
+                    //index = itr - electionServerList->cbegin(); //std::distance(electionServerList->cbegin(), itr);
+                    //cout << "Element present at index " << index;
+
+                    //send to next server in the ring
+                    int nextServer = (index+1)%(electionServerList->size());
+
+                    string addrAndPort = electionServerList->at(nextServer);
+
+                    size_t pos = addrAndPort.find(':');
+                    string addr = addrAndPort.substr(0, pos);
+                    string port = addrAndPort.substr(pos + 1);
+
+                    Connection *nextElectionServer = new Connection(stoi(port), addr.c_str());
+                    Packet *electionPacket = new Packet(CmdType::ELECTION, currentServerAddr);
+                    nextElectionServer->sendPacket(electionPacket);
+                    
+                    nextElectionServer->sendPacket(new Packet(CmdType::CLOSE_CONN, ""));
+                    nextElectionServer->close();
+                }
+                else {
+                   cout << "Element not found";
+                }
+            }
+            cout << "vai fechar a thread" << endl;
             pthread_exit(NULL);
         }
     }
@@ -246,50 +413,51 @@ int main(int argc, char *argv[])
     currentServerAddr.append(":");
     currentServerAddr.append(port);
 
-    routerConn->sendPacket(new Packet(CmdType::SET_PRIMARY_IF_NOT_EXISTS, currentServerAddr));
-    Packet *routerResponse = routerConn->receivePacket();
-
-    bool backup = false;
-
-    switch (routerResponse->getCmd())
-    {
-    case CmdType::SET_PRIMARY:
-        cout << "Sou backup!" << endl;
-        backup = true;
-        break;
-    case CmdType::OK:
-        cout << "Sou primario!" << endl;
-        break;
-    }
-
-    routerConn->sendPacket(new Packet(CmdType::CLOSE_CONN));
-    routerConn->close();
-
     pthread_t *receiveAliveTh;
     pthread_t *sendAliveTh;
 
-    if (backup)
-    {
-        string payload = routerResponse->getPayload();
-        cout << "Payload: " << payload << endl;
-        size_t pos = payload.find(':');
-        string addr = payload.substr(0, pos);
-        string port = payload.substr(pos + 1);
+    do{
 
-        cout << "Port: " << port << endl;
-        cout << "Addr: " << addr << endl;
-        Connection *primaryConn = new Connection(stoi(port), addr.c_str());
-        primaryConn->sendPacket(new Packet(CmdType::SET_BACKUP, currentServerAddr));
+        routerConn->sendPacket(new Packet(CmdType::SET_PRIMARY_IF_NOT_EXISTS, currentServerAddr));
+        Packet *routerResponse = routerConn->receivePacket();
 
-        receiveAliveTh = new pthread_t();
-        if (pthread_create(receiveAliveTh, NULL, receiveAlive, primaryConn) != 0)
+        switch (routerResponse->getCmd())
         {
-            perror("pthread_create error:");
-            return EXIT_FAILURE;
+        case CmdType::SET_PRIMARY:
+            cout << "Sou backup!" << endl;
+            backup = true;
+            break;
+        case CmdType::OK:
+            cout << "Sou primario!" << endl;
+            break;
         }
 
-        pthread_join(*receiveAliveTh, NULL);
-    }
+        routerConn->sendPacket(new Packet(CmdType::CLOSE_CONN));
+        routerConn->close();
+
+        if (backup)
+        {
+            string payload = routerResponse->getPayload();
+            cout << "Payload: " << payload << endl;
+            size_t pos = payload.find(':');
+            string addr = payload.substr(0, pos);
+            string port = payload.substr(pos + 1);
+
+            cout << "Port: " << port << endl;
+            cout << "Addr: " << addr << endl;
+            Connection *primaryConn = new Connection(stoi(port), addr.c_str());
+            primaryConn->sendPacket(new Packet(CmdType::SET_BACKUP, currentServerAddr));
+
+            receiveAliveTh = new pthread_t();
+            if (pthread_create(receiveAliveTh, NULL, receiveAlive, primaryConn) != 0)
+            {
+                perror("pthread_create error:");
+                return EXIT_FAILURE;
+            }
+
+            pthread_join(*receiveAliveTh, NULL);
+        }
+    }while(backup);
 
     cout << "Agora sou primario" << endl;
 
