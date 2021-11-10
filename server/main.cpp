@@ -56,6 +56,7 @@ Profile *receiveProfileCmd(ClientConnection *conn)
     if (packet->getCmd() != CmdType::PROFILE && packet->getCmd() != CmdType::SET_BACKUP)
     {
         profile = profiles->getProfileById(packet->getSender());
+        cout << "getSender: " << packet->getSender() << endl;
     }
 
     if (packet->getCmd() == CmdType::SET_BACKUP)
@@ -88,7 +89,7 @@ void sendElectionMsg(string serverAddr){
 
     int index=0;
     if (itr != electionServerList->cend()) {
-        index = itr - electionServerList->cbegin();// index = std::distance(electionServerList->begin(), itr);
+        index = std::distance(electionServerList->begin(), itr); // index = itr - electionServerList->cbegin(); 
         std::cout << "Element present at index " << index;
 
         //send to next server in the ring
@@ -110,6 +111,51 @@ void sendElectionMsg(string serverAddr){
     else{
         std::cout << "Element not found" << endl;
     }
+}
+
+void sendElectedMsg(string serverAddr, bool setPrimary){
+    electionStarted = false;
+
+    auto itr = std::find(electionServerList->begin(), electionServerList->end(), currentServerAddr);
+    int index=0;
+    if (itr != electionServerList->cend()) {
+        index = std::distance(electionServerList->begin(), itr); //index = itr - electionServerList->cbegin(); 
+        std::cout << "(In if(is Primary)) Element present at index " << index;
+    
+        if(setPrimary){
+            //remove the current primary server from the list
+            // REVER index após essa exclusão
+            electionServerList->erase(itr);
+            
+            cout << "Standard exception RECEIVE_ALIVE: " << endl;
+            routerConn = new Connection(3000, "127.0.0.1");
+            routerConn->sendPacket(new Packet(CmdType::SET_PRIMARY, currentServerAddr));
+            Packet *routerResponse = routerConn->receivePacket();
+            cout << "routerResponse: " << routerResponse->getCmd() << endl;
+            routerConn->sendPacket(new Packet(CmdType::CLOSE_CONN));
+            routerConn->close();
+        }
+
+        //send elected message to next server in the ring
+        int nextServer = (index+1)%electionServerList->size();
+
+        string addrAndPort = electionServerList->at(nextServer);
+
+        size_t pos = addrAndPort.find(':');
+        string addr = addrAndPort.substr(0, pos);
+        string port = addrAndPort.substr(pos + 1);
+
+        Connection *nextElectionServer = new Connection(stoi(port), addr.c_str());
+        Packet *electedPacket = new Packet(CmdType::ELECTED, serverAddr);
+        nextElectionServer->sendPacket(electedPacket);
+
+        nextElectionServer->sendPacket(new Packet(CmdType::CLOSE_CONN, ""));
+        nextElectionServer->close();
+    }              
+    else {
+        std::cout << "(In if(is Primary)) Element not found";
+    }
+
 }
 
 bool processPacket(ClientConnection *conn, Profile *profile, Packet *packet)
@@ -160,112 +206,74 @@ bool processPacket(ClientConnection *conn, Profile *profile, Packet *packet)
         electionServerList->clear();
         while (std::getline(streamData, val)) {
             electionServerList->push_back(val);
+            cout << "Server: " << val << " Inserted" << endl;
         }
-        cout << "ElectionList propagated:\n" << packet->getPayload() << endl;
+        //cout << "ElectionList propagated:\n" << packet->getPayload() << endl;
         break;
     }
     case CmdType::ELECTION:
     {
-        int idComp = strcmp(packet->getPayload().c_str(), currentServerAddr.c_str());
+        // int idComp = strcmp(packet->getPayload().c_str(), currentServerAddr.c_str());
 
-        //if msg id > id -> send; electionStarted
-        //else msg id < id && !electionStarted; -> send(id); electionStarted
-        //else msg id < id && electionStarted -> do nothing
-        //else msg id = id -> isPrimary = true;
+        // //if msg id > id -> send; electionStarted
+        // //else msg id < id && !electionStarted; -> send(id); electionStarted
+        // //else msg id < id && electionStarted -> do nothing
+        // //else msg id = id -> isPrimary = true;
 
-        if(idComp > 0){
-            sendElectionMsg(packet->getPayload());
-        }
-        else if(idComp < 0 && !electionStarted){
-            sendElectionMsg(currentServerAddr);
-        }
-        else if(idComp == 0){ // if msg id == current server id => server was elected as primary
-
-            electionStarted = false;
-
-            auto itr = std::find(electionServerList->begin(), electionServerList->end(), currentServerAddr);
-            int index=0;
-            if (itr != electionServerList->cend()) {
-                index = itr - electionServerList->cbegin(); //index = std::distance(electionServerList->begin(), itr);
-                std::cout << "(In if(is Primary)) Element present at index " << index;
-            
-
-                //remove the current primary server from the list
-                electionServerList->erase(itr);
-                
-                cout << "Standard exception RECEIVE_ALIVE: " << endl;
-                routerConn = new Connection(3000, "127.0.0.1");
-                routerConn->sendPacket(new Packet(CmdType::SET_PRIMARY, currentServerAddr));
-                Packet *routerResponse = routerConn->receivePacket();
-                cout << "routerResponse: " << routerResponse->getCmd() << endl;
-                routerConn->sendPacket(new Packet(CmdType::CLOSE_CONN));
-                routerConn->close();
-
-
-                //send elected message to next server in the ring
-                int nextServer = (index+1)%electionServerList->size();
-
-                string addrAndPort = electionServerList->at(nextServer);
-
-                size_t pos = addrAndPort.find(':');
-                string addr = addrAndPort.substr(0, pos);
-                string port = addrAndPort.substr(pos + 1);
-
-                Connection *nextElectionServer = new Connection(stoi(port), addr.c_str());
-                Packet *electedPacket = new Packet(CmdType::ELECTED, currentServerAddr);
-                nextElectionServer->sendPacket(electedPacket);
-
-                nextElectionServer->sendPacket(new Packet(CmdType::CLOSE_CONN, ""));
-                nextElectionServer->close();
-            }              
-            else {
-                std::cout << "(In if(is Primary)) Element not found";
-            }
-        }
+        // if(idComp > 0){
+        //     sendElectionMsg(packet->getPayload());
+        // }
+        // else if(idComp < 0 && !electionStarted){
+        //     sendElectionMsg(currentServerAddr);
+        // }
+        // else if(idComp == 0){ // if msg id == current server id => current server was elected as primary
+        //     sendElectedMsg(currentServerAddr, true);
+        // }
 
         break;
     }
     case CmdType::ELECTED:
     {
-        int idComp = strcmp(packet->getPayload().c_str(), currentServerAddr.c_str());
+        // int idComp = strcmp(packet->getPayload().c_str(), currentServerAddr.c_str());
 
 
-        if(idComp != 0){
-            electionStarted = false;
+        // if(idComp != 0){ // if msg id != id => current server isn't the elected server, so propagate message forward 
+        //     sendElectedMsg(currentServerAddr, false);
+        //     backup = true;
+            
+        //     /* electionStarted = false;
 
-            auto itr = std::find(electionServerList->begin(), electionServerList->end(), currentServerAddr);
-            int index=0;
-            if (itr != electionServerList->cend()) {
-                index = itr - electionServerList->cbegin(); //index = std::distance(electionServerList->begin(), itr);
-                std::cout << "(In if(is Primary)) Element present at index " << index;
+        //     auto itr = std::find(electionServerList->begin(), electionServerList->end(), currentServerAddr);
+        //     int index=0;
+        //     if (itr != electionServerList->cend()) {
+        //         index = itr - electionServerList->cbegin(); //index = std::distance(electionServerList->begin(), itr);
+        //         std::cout << "(In if(is Primary)) Element present at index " << index;
 
 
-                //send elected message to next server in the ring
-                int nextServer = (index+1)%electionServerList->size();
+        //         //send elected message to next server in the ring
+        //         int nextServer = (index+1)%electionServerList->size();
 
-                string addrAndPort = electionServerList->at(nextServer);
+        //         string addrAndPort = electionServerList->at(nextServer);
 
-                size_t pos = addrAndPort.find(':');
-                string addr = addrAndPort.substr(0, pos);
-                string port = addrAndPort.substr(pos + 1);
+        //         size_t pos = addrAndPort.find(':');
+        //         string addr = addrAndPort.substr(0, pos);
+        //         string port = addrAndPort.substr(pos + 1);
 
-                Connection *nextElectionServer = new Connection(stoi(port), addr.c_str());
-                Packet *electedPacket = new Packet(CmdType::ELECTED, currentServerAddr);
-                nextElectionServer->sendPacket(electedPacket);
+        //         Connection *nextElectionServer = new Connection(stoi(port), addr.c_str());
+        //         Packet *electedPacket = new Packet(CmdType::ELECTED, currentServerAddr);
+        //         nextElectionServer->sendPacket(electedPacket);
 
-                nextElectionServer->sendPacket(new Packet(CmdType::CLOSE_CONN, ""));
-                nextElectionServer->close();
-
-                backup = true;
-
-            }              
-            else {
-                std::cout << "(In if(is Primary)) Element not found";
-            }
-        }
-        else{
-            backup = false;
-        }
+        //         nextElectionServer->sendPacket(new Packet(CmdType::CLOSE_CONN, ""));
+        //         nextElectionServer->close();
+        //     }              
+        //     else {
+        //         std::cout << "(In if(is Primary)) Element not found";
+        //     } 
+        //     */
+        // }
+        // else{
+        //     backup = false;
+        // }
 
         break;
     }
@@ -345,40 +353,51 @@ void *receiveAlive(void *_conn)
         {
             // Entra aqui quando o server for desligado (simulação de um crash)
             cout << "Entrou no catch" << endl;
+
+            cout << "Standard exception RECEIVE_ALIVE: " << endl;
+            routerConn = new Connection(3000, "127.0.0.1");
+            routerConn->sendPacket(new Packet(CmdType::SET_PRIMARY, currentServerAddr));
+            Packet *routerResponse = routerConn->receivePacket();
+            cout << "routerResponse: " << routerResponse->getCmd() << endl;
+            routerConn->sendPacket(new Packet(CmdType::CLOSE_CONN));
+            routerConn->close();
+
             // Se está em processo de/começou a eleição => ignora outras eleiçẽos iniciadas a seguir
-            if(!electionStarted){
-                electionStarted = true;
+            // if(!electionStarted){
+            //     sendElectionMsg(currentServerAddr);
+                
+                // electionStarted = true;
 
-                cout << "Entrei no if" << endl;
-                //find current server in electionServerList
-                auto itr = std::find(electionServerList->begin(), electionServerList->end(), currentServerAddr);
-                cout << "Passou iterator" << endl;
-                int index = 0;
-                if (itr != electionServerList->end()) {
-                    cout << "entrou no if 3" << endl;
-                    //index = itr - electionServerList->cbegin(); //std::distance(electionServerList->cbegin(), itr);
-                    //cout << "Element present at index " << index;
+                // cout << "Entrei no if" << endl;
+                // //find current server in electionServerList
+                // auto itr = std::find(electionServerList->begin(), electionServerList->end(), currentServerAddr);
+                // cout << "Passou iterator" << endl;
+                // int index = 0;
+                // if (itr != electionServerList->end()) {
+                //     cout << "entrou no if 3" << endl;
+                //     //index = itr - electionServerList->cbegin(); //std::distance(electionServerList->cbegin(), itr);
+                //     //cout << "Element present at index " << index;
 
-                    //send to next server in the ring
-                    int nextServer = (index+1)%(electionServerList->size());
+                //     //send to next server in the ring
+                //     int nextServer = (index+1)%(electionServerList->size());
 
-                    string addrAndPort = electionServerList->at(nextServer);
+                //     string addrAndPort = electionServerList->at(nextServer);
 
-                    size_t pos = addrAndPort.find(':');
-                    string addr = addrAndPort.substr(0, pos);
-                    string port = addrAndPort.substr(pos + 1);
+                //     size_t pos = addrAndPort.find(':');
+                //     string addr = addrAndPort.substr(0, pos);
+                //     string port = addrAndPort.substr(pos + 1);
 
-                    Connection *nextElectionServer = new Connection(stoi(port), addr.c_str());
-                    Packet *electionPacket = new Packet(CmdType::ELECTION, currentServerAddr);
-                    nextElectionServer->sendPacket(electionPacket);
+                //     Connection *nextElectionServer = new Connection(stoi(port), addr.c_str());
+                //     Packet *electionPacket = new Packet(CmdType::ELECTION, currentServerAddr);
+                //     nextElectionServer->sendPacket(electionPacket);
                     
-                    nextElectionServer->sendPacket(new Packet(CmdType::CLOSE_CONN, ""));
-                    nextElectionServer->close();
-                }
-                else {
-                   cout << "Element not found";
-                }
-            }
+                //     nextElectionServer->sendPacket(new Packet(CmdType::CLOSE_CONN, ""));
+                //     nextElectionServer->close();
+                // }
+                // else {
+                //    cout << "Element not found";
+                // }
+            //}
             cout << "vai fechar a thread" << endl;
             pthread_exit(NULL);
         }
@@ -406,7 +425,6 @@ int main(int argc, char *argv[])
     listBackups = new vector<ClientConnection *>();
     electionServerList = new vector<string>();
     signal(SIGINT, interruptionHandler);
-    routerConn = new Connection(3000, "127.0.0.1");
 
     currentServerAddr.clear();
     currentServerAddr.append(addr);
@@ -416,28 +434,40 @@ int main(int argc, char *argv[])
     pthread_t *receiveAliveTh;
     pthread_t *sendAliveTh;
 
-    do{
-
+    //do{
+        routerConn = new Connection(3000, "127.0.0.1");
         routerConn->sendPacket(new Packet(CmdType::SET_PRIMARY_IF_NOT_EXISTS, currentServerAddr));
         Packet *routerResponse = routerConn->receivePacket();
 
+        cout << "(Router) getCmd: " << routerResponse->getCmd() << endl;
+        string payload = routerResponse->getPayload();
+        
         switch (routerResponse->getCmd())
         {
         case CmdType::SET_PRIMARY:
-            cout << "Sou backup!" << endl;
-            backup = true;
+            // if Server addr returned == current server addr => current server is primary
+            if(strcmp(payload.c_str(), currentServerAddr.c_str()) == 0){
+                cout << "Sou primario" << endl;
+                backup = false;
+            }
+            else{
+                cout << "Sou backup!" << endl;
+                backup = true;
+            }
             break;
         case CmdType::OK:
             cout << "Sou primario!" << endl;
+            backup = false;
             break;
         }
 
         routerConn->sendPacket(new Packet(CmdType::CLOSE_CONN));
         routerConn->close();
 
+
         if (backup)
         {
-            string payload = routerResponse->getPayload();
+            //string payload = routerResponse->getPayload();
             cout << "Payload: " << payload << endl;
             size_t pos = payload.find(':');
             string addr = payload.substr(0, pos);
@@ -456,8 +486,10 @@ int main(int argc, char *argv[])
             }
 
             pthread_join(*receiveAliveTh, NULL);
+
+            // só deve prosseguir se eleição já acabou?
         }
-    }while(backup);
+    //}while(backup);
 
     cout << "Agora sou primario" << endl;
 
@@ -472,6 +504,7 @@ int main(int argc, char *argv[])
     while (true)
     {
         ClientConnection *conn = server->waitClient();
+        cout << "Passou do waitClient" << endl;
         pthread_t *th = new pthread_t();
         if (pthread_create(th, NULL, fromClient, conn) != 0)
         {

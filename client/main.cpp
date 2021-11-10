@@ -84,12 +84,17 @@ void updateConn()
             {
                 con = new Connection(stoi(port), addr.c_str());
                 retry = false;
+                if(con){
+                    cout << "conectou " << con->isClosed() << endl;
+                }
+                //con->sendPacket(new Packet(CmdType::OK, "", profile));
             }
             catch (...)
             {
                 cout << "Tentando se conectar ao novo servidor primário..." << endl;
             }
         }
+
 
         cout << "vou sair" << endl;
     }
@@ -101,17 +106,13 @@ void *toServer(void *args)
     string line;
     char *profile = (char *)args;
 
-    // updateConn();
-
     sendPresentation(profile);
 
     getline(cin, line);
     while (!cin.eof())
     {
-        if (con == nullptr || !con->isClosed())
+        if(con == nullptr || !con->isClosed())
         {
-            // updateConn();
-
             Packet *packet;
             if (line.rfind("FOLLOW") == 0)
             {
@@ -174,7 +175,7 @@ void *fromServer(void *args)
             {
                 stringstream ss;
                 time_t time = packet->getTimestamp();
-                ss << put_time(localtime(&time), "%d/%m/%Y %H:%M ");
+                ss << put_time(localtime(&time), "%d/%m/%Y %H:%M");
                 cout << "(" << ss.str() << ") " << packet->getSender() << ": " << packet->getPayload() << endl;
             }
         }
