@@ -92,21 +92,29 @@ void sendElectionMsg(string serverAddr){
     electionStarted = true;
     auto itr = std::find(electionServerList->begin(), electionServerList->end(), currentServerAddr);
 
+    cout << "Found Server in list" << endl;
     int index=0;
     if (itr != electionServerList->cend()) {
+        cout << "Entrou no if fo sendElection" << endl;
         index = std::distance(electionServerList->begin(), itr); // index = itr - electionServerList->cbegin(); 
-        std::cout << "Element present at index " << index;
+        cout << "Element present at index " << index << endl;
 
         //send to next server in the ring
-        int nextServer = (index+1)%electionServerList->size();
+        int nextServer = (index+1)%(electionServerList->size());
+        cout << "nextserver: " << nextServer << endl;
 
         string addrAndPort = electionServerList->at(nextServer);
+        cout << "Server: " << addrAndPort << endl;
 
         size_t pos = addrAndPort.find(':');
         string addr = addrAndPort.substr(0, pos);
         string port = addrAndPort.substr(pos + 1);
+        
+        cout << "addr: " << addr << endl;
+        cout << "port: " << port << endl;
 
         Connection *nextElectionServer = new Connection(stoi(port), addr.c_str());
+        cout << "Criou conexao com nextServer" << endl;
         Packet *electionPacket = new Packet(CmdType::ELECTION, serverAddr);
         nextElectionServer->sendPacket(electionPacket);
         
@@ -125,7 +133,7 @@ void sendElectedMsg(string serverAddr, bool setPrimary){
     int index=0;
     if (itr != electionServerList->cend()) {
         index = std::distance(electionServerList->begin(), itr); //index = itr - electionServerList->cbegin(); 
-        std::cout << "(In if(is Primary)) Element present at index " << index;
+        std::cout << "(sendElected) Element present at index " << index;
     
         if(setPrimary){
             //remove the current primary server from the list
@@ -142,7 +150,7 @@ void sendElectedMsg(string serverAddr, bool setPrimary){
         }
 
         //send elected message to next server in the ring
-        int nextServer = (index+1)%electionServerList->size();
+        int nextServer = (index+1)%(electionServerList->size());
 
         string addrAndPort = electionServerList->at(nextServer);
 
@@ -158,7 +166,7 @@ void sendElectedMsg(string serverAddr, bool setPrimary){
         nextElectionServer->close();
     }              
     else {
-        std::cout << "(In if(is Primary)) Element not found";
+        std::cout << "(sendElected) Element not found";
     }
 
 }
@@ -170,94 +178,58 @@ bool processPacket(ClientConnection *conn, Profile *profile, Packet *packet)
     // cout << "processPacket" << endl;
     switch (packet->getCmd())
     {
-    case CmdType::PROFILE:
-    {
-        profiles->createProfileIfNotExists(packet->getPayload(), conn);
-        sendToBackups(packet);
-        break;
-    }
-    case CmdType::FOLLOW:
-    {
-        cout << "FOLLOW" << endl;
-        profiles->addFollowerTo(packet->getPayload(), profile);
-        sendToBackups(packet);
-        break;
-    }
-    case CmdType::CLOSE_CONN:
-    {
-        cout << "CLOSE_CONN" << endl;
-        profile->decSessionsOn(conn);
-        clientWantsToQuit = true;
-        sendToBackups(packet);
-        break;
-    }
-    case CmdType::SEND:
-    {
-        cout << "SEND" << endl;
-        profiles->sendToFollowersOf(profile, packet);
-        sendToBackups(packet);
-        break;
-    }
-    case CmdType::ALIVE:
-    {
-        cout << "Vivo" << endl;
-        break;
-    }
-    case CmdType::BACKUP_PROPAGATION:
-    {   
-        std::string strData = packet->getPayload();
-        std::stringstream streamData(strData);     
-        std::string val;
-        electionServerList->clear();
-        while (std::getline(streamData, val)) {
-            electionServerList->push_back(val);
-            cout << "Server: " << val << " Inserted" << endl;
+        case CmdType::PROFILE:
+        {
+            profiles->createProfileIfNotExists(packet->getPayload(), conn);
+            sendToBackups(packet);
+            break;
         }
-        //cout << "ElectionList propagated:\n" << packet->getPayload() << endl;
-        break;
-    }
-    case CmdType::ELECTION:
-    {
-        // int idComp = strcmp(packet->getPayload().c_str(), currentServerAddr.c_str());
-
-        // //if msg id > id -> send; electionStarted
-        // //else msg id < id && !electionStarted; -> send(id); electionStarted
-        // //else msg id < id && electionStarted -> do nothing
-        // //else msg id = id -> isPrimary = true;
-
-        // if(idComp > 0){
-        //     sendElectionMsg(packet->getPayload());
-        // }
-        // else if(idComp < 0 && !electionStarted){
-        //     sendElectionMsg(currentServerAddr);
-        // }
-        // else if(idComp == 0){ // if msg id == current server id => current server was elected as primary
-        //     sendElectedMsg(currentServerAddr, true);
-        // }
-
-        break;
-    }
-    case CmdType::ELECTED:
-    {
-        // int idComp = strcmp(packet->getPayload().c_str(), currentServerAddr.c_str());
-
-
-        // if(idComp != 0){ // if msg id != id => current server isn't the elected server, so propagate message forward 
-        //     sendElectedMsg(currentServerAddr, false);
-        //     backup = true;
-        // }
-        // else{
-        //     backup = false;
-        // }
-
-        break;
-    }
-    default:
-    {
-        // cout << "Print getcmd: " << packet->getCmd() << endl;
-        // cout << "I dont know..." << endl;
-        break;
-    }
+        case CmdType::FOLLOW:
+        {
+            cout << "FOLLOW" << endl;
+            profiles->addFollowerTo(packet->getPayload(), profile);
+            sendToBackups(packet);
+            break;
+        }
+        case CmdType::CLOSE_CONN:
+        {
+            cout << "CLOSE_CONN" << endl;
+            profile->decSessionsOn(conn);
+            clientWantsToQuit = true;
+            sendToBackups(packet);
+            break;
+        }
+        case CmdType::SEND:
+        {
+            cout << "SEND" << endl;
+            profiles->sendToFollowersOf(profile, packet);
+            sendToBackups(packet);
+            break;
+        }
+        case CmdType::ALIVE:
+        {
+            cout << "Vivo" << endl;
+            break;
+        }
+        case CmdType::BACKUP_PROPAGATION:
+        {   
+            std::string strData = packet->getPayload();
+            std::stringstream streamData(strData);     
+            std::string val;
+            electionServerList->clear();
+            while (std::getline(streamData, val)) {
+                electionServerList->push_back(val);
+                cout << "Server: " << val << " Inserted" << endl;
+            }
+            //cout << "ElectionList propagated:\n" << packet->getPayload() << endl;
+            break;
+        }
+        default:
+        {
+            // cout << "Print getcmd: " << packet->getCmd() << endl;
+            // cout << "I dont know..." << endl;
+            break;
+        }
     }
 
     return clientWantsToQuit;
@@ -329,20 +301,96 @@ void *receiveAlive(void *_conn)
             // Entra aqui quando o server for desligado (simulação de um crash)
             cout << "Entrou no catch" << endl;
 
-            cout << "Standard exception RECEIVE_ALIVE: " << endl;
-            routerConn = new Connection(3000, "127.0.0.1");
-            routerConn->sendPacket(new Packet(CmdType::SET_PRIMARY, currentServerAddr));
-            Packet *routerResponse = routerConn->receivePacket();
-            cout << "routerResponse: " << routerResponse->getCmd() << endl;
-            routerConn->sendPacket(new Packet(CmdType::CLOSE_CONN));
-            routerConn->close();
+            // cout << "Standard exception RECEIVE_ALIVE: " << endl;
+            // routerConn = new Connection(3000, "127.0.0.1");
+            // routerConn->sendPacket(new Packet(CmdType::SET_PRIMARY, currentServerAddr));
+            // Packet *routerResponse = routerConn->receivePacket();
+            // cout << "routerResponse: " << routerResponse->getCmd() << endl;
+            // routerConn->sendPacket(new Packet(CmdType::CLOSE_CONN));
+            // routerConn->close();
 
             // Se está em processo de/começou a eleição => ignora outras eleiçẽos iniciadas a seguir
-            // if(!electionStarted){
-            //     sendElectionMsg(currentServerAddr);
-            //}
+            if(!electionStarted){
+                cout << "Entrou no if da election" << endl;
+                //try{
+                    sendElectionMsg(currentServerAddr);
+                //}
+                // catch(exception e){
+                //     cout << "Caiu no catch: " << e.what() << endl;
+                // }
+                cout << "Saiu de sendElectionMessage" << endl;
+            }
             cout << "vai fechar a thread" << endl;
             pthread_exit(NULL);
+        }
+    }
+}
+
+void *electionHandler(void *_conn){
+    size_t pos = currentServerAddr.find(':');
+    //string addr = currentServerAddr.substr(0, pos);
+    string port = currentServerAddr.substr(pos + 1);
+
+    Server *electionSocket = new Server(stoi(port));
+
+    ClientConnection *conn = electionSocket->waitClient();
+
+    while(true){
+        Packet *electionPacket = conn->receivePacket();
+
+        switch (electionPacket->getCmd())
+        {
+            case CmdType::ELECTION:
+            {
+                cout << "Received ELECTION message from: " << electionPacket->getPayload() << endl;
+                //int idComp = strcmp(electionPacket->getPayload().c_str(), currentServerAddr.c_str());
+
+                // //if msg id > id -> send; electionStarted
+                // //else msg id < id && !electionStarted; -> send(id); electionStarted
+                // //else msg id < id && electionStarted -> do nothing
+                // //else msg id = id -> isPrimary = true;
+
+                // if(idComp > 0){
+                //     sendElectionMsg(electionPacket->getPayload());
+                // }
+                // else if(idComp < 0 && !electionStarted){
+                //     sendElectionMsg(currentServerAddr);
+                // }
+                // else if(idComp == 0){ // if msg id == current server id => current server was elected as primary
+                //     sendElectedMsg(currentServerAddr, true);
+                // }
+                pthread_exit(nullptr);
+
+                break;
+            }
+            case CmdType::ELECTED:
+            {
+                // int idComp = strcmp(electionPacket->getPayload().c_str(), currentServerAddr.c_str());
+
+
+                // if(idComp != 0){ // if msg id != id => current server isn't the elected server, so propagate message forward 
+                //     sendElectedMsg(currentServerAddr, false);
+                //     backup = true;
+                // }
+                // else{
+                //     backup = false;
+                // }
+                conn->close();
+                electionSocket->close();
+                pthread_exit(nullptr);
+                break;
+            }
+            case CmdType::CLOSE_CONN:
+            {
+                conn->close();
+                break;
+            }
+            default:
+            {
+                // cout << "Print getcmd: " << electionPacket->getCmd() << endl;
+                // cout << "I dont know..." << endl;
+                break;
+            }
         }
     }
 }
@@ -376,8 +424,9 @@ int main(int argc, char *argv[])
 
     pthread_t *receiveAliveTh;
     pthread_t *sendAliveTh;
+    pthread_t *electionHandlerTh;
 
-    //do{
+    do{
         routerConn = new Connection(3000, "127.0.0.1");
         routerConn->sendPacket(new Packet(CmdType::SET_PRIMARY_IF_NOT_EXISTS, currentServerAddr));
         Packet *routerResponse = routerConn->receivePacket();
@@ -421,18 +470,26 @@ int main(int argc, char *argv[])
             Connection *primaryConn = new Connection(stoi(port), addr.c_str());
             primaryConn->sendPacket(new Packet(CmdType::SET_BACKUP, currentServerAddr));
 
+            electionHandlerTh = new pthread_t();
+            if (pthread_create(electionHandlerTh, NULL, electionHandler, nullptr) != 0)
+            {
+                perror("pthread_create error:");
+                return EXIT_FAILURE;
+            }
+
             receiveAliveTh = new pthread_t();
             if (pthread_create(receiveAliveTh, NULL, receiveAlive, primaryConn) != 0)
             {
                 perror("pthread_create error:");
                 return EXIT_FAILURE;
             }
+            
 
             pthread_join(*receiveAliveTh, NULL);
-
+            pthread_join(*electionHandlerTh, NULL);
             // só deve prosseguir se eleição já acabou?
         }
-    //}while(backup);
+    }while(backup);
 
     cout << "Agora sou primario" << endl;
 
