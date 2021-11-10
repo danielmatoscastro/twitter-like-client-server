@@ -20,8 +20,6 @@
 #include "Profile.h"
 #include "ProfileAccessController.h"
 
-//#define PORT 4242
-
 using namespace std;
 
 Connection *routerConn;
@@ -52,15 +50,10 @@ Profile *receiveProfileCmd(ClientConnection *conn)
     Profile *profile = nullptr;
     Packet *toClient;
     Packet *packet = conn->receivePacket();
-    cout << "packet primeirao " << packet->getPayload() << endl;
-    cout << "CmdType " << packet->getCmd() << endl;
 
     if (packet->getCmd() != CmdType::PROFILE && packet->getCmd() != CmdType::SET_BACKUP)
     {
         profile = profiles->getProfileById(packet->getSender());
-        cout << "getSender: " << packet->getSender() << endl;
-        cout << "profile: " << profile->getProfileId() << endl;
-
         profile->updateSessionsOn(conn);
     }
 
@@ -83,7 +76,6 @@ void sendToBackups(Packet *packet)
 {
     for (int i = 0; i < listBackups->size(); i++)
     {
-        cout << "enviando para backup" << endl;
         listBackups->at(i)->sendPacket(packet);
     }
 }
@@ -94,7 +86,7 @@ void sendElectionMsg(string serverAddr){
 
     int index=0;
     if (itr != electionServerList->cend()) {
-        index = std::distance(electionServerList->begin(), itr); // index = itr - electionServerList->cbegin(); 
+        index = std::distance(electionServerList->begin(), itr);
         std::cout << "Element present at index " << index;
 
         //send to next server in the ring
@@ -167,7 +159,6 @@ bool processPacket(ClientConnection *conn, Profile *profile, Packet *packet)
 {
     bool clientWantsToQuit = false;
 
-    // cout << "processPacket" << endl;
     switch (packet->getCmd())
     {
     case CmdType::PROFILE:
@@ -178,14 +169,12 @@ bool processPacket(ClientConnection *conn, Profile *profile, Packet *packet)
     }
     case CmdType::FOLLOW:
     {
-        cout << "FOLLOW" << endl;
         profiles->addFollowerTo(packet->getPayload(), profile);
         sendToBackups(packet);
         break;
     }
     case CmdType::CLOSE_CONN:
     {
-        cout << "CLOSE_CONN" << endl;
         profile->decSessionsOn(conn);
         clientWantsToQuit = true;
         sendToBackups(packet);
@@ -193,14 +182,12 @@ bool processPacket(ClientConnection *conn, Profile *profile, Packet *packet)
     }
     case CmdType::SEND:
     {
-        cout << "SEND" << endl;
         profiles->sendToFollowersOf(profile, packet);
         sendToBackups(packet);
         break;
     }
     case CmdType::ALIVE:
     {
-        cout << "Vivo" << endl;
         break;
     }
     case CmdType::BACKUP_PROPAGATION:
@@ -211,9 +198,7 @@ bool processPacket(ClientConnection *conn, Profile *profile, Packet *packet)
         electionServerList->clear();
         while (std::getline(streamData, val)) {
             electionServerList->push_back(val);
-            cout << "Server: " << val << " Inserted" << endl;
         }
-        //cout << "ElectionList propagated:\n" << packet->getPayload() << endl;
         break;
     }
     case CmdType::ELECTION:
@@ -254,8 +239,6 @@ bool processPacket(ClientConnection *conn, Profile *profile, Packet *packet)
     }
     default:
     {
-        // cout << "Print getcmd: " << packet->getCmd() << endl;
-        // cout << "I dont know..." << endl;
         break;
     }
     }
@@ -283,15 +266,9 @@ void *fromClient(void *_conn)
     bool clientWantsToQuit = false;
     while (!clientWantsToQuit && !conn->isClosed())
     {
-        // cout << "entrou aqui" << endl;
         Packet *packet = conn->receivePacket();
 
-        // cout << "Payload: " << packet->getPayload() << endl;
-
         clientWantsToQuit = processPacket(conn, profile, packet);
-
-        // Packet *yep = new Packet(CmdType::SEND, "Yep!", "server");
-        // conn->sendPacket(yep);
     }
 
     conn->close();
@@ -305,7 +282,6 @@ void *sendAlive(void *_conn)
         for (int i = 0; i < listBackups->size(); i++)
         {
             cout << i << endl;
-            // listConnections->at(i)->sendPacket(new Packet(CmdType::ALIVE));
         }
     }
 }
@@ -319,21 +295,15 @@ void *receiveAlive(void *_conn)
         try
         {
             Packet *packet = primary_conn->receivePacket();
-            cout << packet->getCmd() << " " << packet->getPayload() << endl;
             Profile *profile = profiles->getProfileById(packet->getSender());
-            cout << "chamando processPacket " << profile << " sender:" << packet->getSender() << endl;
             processPacket(nullptr, profile, packet);
         }
         catch (...)
         {
             // Entra aqui quando o server for desligado (simulação de um crash)
-            cout << "Entrou no catch" << endl;
-
-            cout << "Standard exception RECEIVE_ALIVE: " << endl;
             routerConn = new Connection(3000, "127.0.0.1");
             routerConn->sendPacket(new Packet(CmdType::SET_PRIMARY, currentServerAddr));
             Packet *routerResponse = routerConn->receivePacket();
-            cout << "routerResponse: " << routerResponse->getCmd() << endl;
             routerConn->sendPacket(new Packet(CmdType::CLOSE_CONN));
             routerConn->close();
 
@@ -341,7 +311,6 @@ void *receiveAlive(void *_conn)
             // if(!electionStarted){
             //     sendElectionMsg(currentServerAddr);
             //}
-            cout << "vai fechar a thread" << endl;
             pthread_exit(NULL);
         }
     }
@@ -377,16 +346,14 @@ int main(int argc, char *argv[])
     pthread_t *receiveAliveTh;
     pthread_t *sendAliveTh;
 
-    //do{
-        routerConn = new Connection(3000, "127.0.0.1");
-        routerConn->sendPacket(new Packet(CmdType::SET_PRIMARY_IF_NOT_EXISTS, currentServerAddr));
-        Packet *routerResponse = routerConn->receivePacket();
+    routerConn = new Connection(3000, "127.0.0.1");
+    routerConn->sendPacket(new Packet(CmdType::SET_PRIMARY_IF_NOT_EXISTS, currentServerAddr));
+    Packet *routerResponse = routerConn->receivePacket();
 
-        cout << "(Router) getCmd: " << routerResponse->getCmd() << endl;
-        string payload = routerResponse->getPayload();
+    string payload = routerResponse->getPayload();
         
-        switch (routerResponse->getCmd())
-        {
+    switch (routerResponse->getCmd())
+    {
         case CmdType::SET_PRIMARY:
             // if Server addr returned == current server addr => current server is primary
             if(strcmp(payload.c_str(), currentServerAddr.c_str()) == 0){
@@ -407,17 +374,12 @@ int main(int argc, char *argv[])
         routerConn->sendPacket(new Packet(CmdType::CLOSE_CONN));
         routerConn->close();
 
-
         if (backup)
         {
-            //string payload = routerResponse->getPayload();
-            cout << "Payload: " << payload << endl;
             size_t pos = payload.find(':');
             string addr = payload.substr(0, pos);
             string port = payload.substr(pos + 1);
 
-            cout << "Port: " << port << endl;
-            cout << "Addr: " << addr << endl;
             Connection *primaryConn = new Connection(stoi(port), addr.c_str());
             primaryConn->sendPacket(new Packet(CmdType::SET_BACKUP, currentServerAddr));
 
@@ -430,11 +392,7 @@ int main(int argc, char *argv[])
 
             pthread_join(*receiveAliveTh, NULL);
 
-            // só deve prosseguir se eleição já acabou?
         }
-    //}while(backup);
-
-    cout << "Agora sou primario" << endl;
 
     server = new Server(stoi(port));
     sendAliveTh = new pthread_t();
@@ -447,7 +405,6 @@ int main(int argc, char *argv[])
     while (true)
     {
         ClientConnection *conn = server->waitClient();
-        cout << "Passou do waitClient" << endl;
         pthread_t *th = new pthread_t();
         if (pthread_create(th, NULL, fromClient, conn) != 0)
         {

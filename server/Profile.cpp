@@ -64,21 +64,17 @@ void Profile::updateSessionsOn(ClientConnection *conn)
 void Profile::sendOrInsertInbox(Packet *packet)
 {
     pthread_mutex_lock(&m);
-    cout << "No profile" << endl;
     if (this->getSessionsOn() > 0)
     {
-        cout << "if" << endl;
         for (auto session : *this->sessions)
         {
             if(session != NULL){
-                cout << "sending packet" << endl;
                 session->sendPacket(packet);    
             }
         }
     }
     else
     {
-        cout << "else" << endl;
         this->inbox->insertPacket(packet);
     }
     pthread_mutex_unlock(&m);
