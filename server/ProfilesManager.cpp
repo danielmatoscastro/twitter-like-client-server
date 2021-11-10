@@ -47,15 +47,11 @@ bool ProfilesManager::hasProfile(string profileId)
 
 void ProfilesManager::addFollowerTo(string followed, Profile *follower)
 {
-    cout << "addFollowerTo" << endl;
-
     if (follower->getProfileId() == followed)
     {
-        cout << "entrei no if" << endl;
         return;
     }
 
-    cout << "passei do if" << endl;
     cout << follower->getProfileId() << " wants to follow " << followed << endl;
 
     Profile *profileToFollow = this->getProfileById(followed);
@@ -131,7 +127,7 @@ void ProfilesManager::sendToFollowersOf(Profile *profile, Packet *packet)
     for (int i = 0; i < profile->getFollowers()->size(); i++)
     {
         Profile *follower = profile->getFollowers()->at(i);
-        cout << "Adding \"" << packet->getPayload() << "\" in the inbox of " << follower->getProfileId() << endl;
+        //cout << "Adding \"" << packet->getPayload() << "\" in the inbox of " << follower->getProfileId() << endl;
         follower->sendOrInsertInbox(packet);
     }
 
@@ -140,7 +136,6 @@ void ProfilesManager::sendToFollowersOf(Profile *profile, Packet *packet)
 
 Profile *ProfilesManager::createProfileIfNotExists(string profileId, ClientConnection *conn)
 {
-    cout << "createProfileIfNotExists" << endl;
     Profile *profile = this->getProfileById(profileId);
     if (profile != nullptr)
     {
@@ -155,7 +150,6 @@ Profile *ProfilesManager::createProfileIfNotExists(string profileId, ClientConne
     }
     else
     {
-        cout << "else" << endl;
         profile = new Profile(profileId);
         this->insertProfile(profileId, profile);
         cout << "Profile " << profileId << " was created." << endl;

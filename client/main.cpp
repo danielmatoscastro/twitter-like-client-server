@@ -24,20 +24,12 @@ void interruptionHandler(sig_atomic_t sigAtomic)
     Packet *packet = new Packet(CmdType::CLOSE_CONN, "", prof);
     con->sendPacket(packet);
     con->close();
-    cout << "sending close packet to router" << endl;
     routerConn->sendPacket(packet);
     routerConn->close();
 
     //kill to avoid useless threads running
     pthread_kill(toServerTh, SIGKILL);
     pthread_kill(fromServerTh, SIGKILL);
-
-    //pthread_cancel(toServerTh);
-    //pthread_cancel(fromServerTh);
-
-    
-
-    cout << "Depois do join INTERRUPTION HANDLER" << endl;
 }
 
 void sendPresentation(char *profile)
@@ -57,15 +49,9 @@ void updateConn(bool sendOk)
     Packet *Response = routerConn->receivePacket();
 
     string payload = Response->getPayload();
-    cout << "payload: " << payload << endl;
-    cout << "primary: " << primary << endl;
-    cout << payload.compare(primary) << endl;
     if (payload.compare(primary) != 0)
     {
         primary = payload;
-        cout << "entrei" << endl;
-        cout << "payload: " << payload << endl;
-        cout << "primary: " << primary << endl;
         // formato "addr:port"
         size_t pos = payload.find(':');
         string addr = payload.substr(0, pos);
@@ -75,7 +61,6 @@ void updateConn(bool sendOk)
         {
             con->close();
         }
-        cout << "port: " << port << endl;
 
         bool retry = true;
         while (retry)
@@ -84,9 +69,7 @@ void updateConn(bool sendOk)
             {
                 con = new Connection(stoi(port), addr.c_str());
                 retry = false;
-                if(con){
-                    cout << "conectou " << con->isClosed() << endl;
-                }
+
                 if(sendOk){
                     // Sending profile to new Primary server (to update the session/conection)
                     con->sendPacket(new Packet(CmdType::OK, "", profile));
@@ -94,12 +77,8 @@ void updateConn(bool sendOk)
             }
             catch (...)
             {
-                cout << "Tentando se conectar ao novo servidor primário..." << endl;
             }
         }
-
-
-        cout << "vou sair" << endl;
     }
     pthread_mutex_unlock(&updateMutex);
 }
@@ -119,12 +98,10 @@ void *toServer(void *args)
             Packet *packet;
             if (line.rfind("FOLLOW") == 0)
             {
-                cout << "sending FOLLOW" << endl;
                 packet = new Packet(CmdType::FOLLOW, line.substr(7), profile);
             }
             else if (line.rfind("SEND") == 0)
             {
-                cout << "sending SEND" << endl;
                 string message = line.substr(5);
                 if (message.size() > MAX_MSG_LEN)
                 {
@@ -222,8 +199,6 @@ int main(int argc, char *argv[])
 
     pthread_join(toServerTh, NULL);
     pthread_join(fromServerTh, NULL);
-
-    cout << "Depois do join" << endl;
 
     return EXIT_SUCCESS;
 }

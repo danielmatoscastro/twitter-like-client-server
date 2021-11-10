@@ -20,8 +20,6 @@
 #include "Profile.h"
 #include "ProfileAccessController.h"
 
-//#define PORT 4242
-
 using namespace std;
 
 Connection *routerConn;
@@ -52,15 +50,10 @@ Profile *receiveProfileCmd(ClientConnection *conn)
     Profile *profile = nullptr;
     Packet *toClient;
     Packet *packet = conn->receivePacket();
-    cout << "packet primeirao " << packet->getPayload() << endl;
-    cout << "CmdType " << packet->getCmd() << endl;
 
     if (packet->getCmd() != CmdType::PROFILE && packet->getCmd() != CmdType::SET_BACKUP)
     {
         profile = profiles->getProfileById(packet->getSender());
-        cout << "getSender: " << packet->getSender() << endl;
-        cout << "profile: " << profile->getProfileId() << endl;
-
         profile->updateSessionsOn(conn);
     }
 
@@ -83,7 +76,6 @@ void sendToBackups(Packet *packet)
 {
     for (int i = 0; i < listBackups->size(); i++)
     {
-        cout << "enviando para backup" << endl;
         listBackups->at(i)->sendPacket(packet);
     }
 }
@@ -175,7 +167,6 @@ bool processPacket(ClientConnection *conn, Profile *profile, Packet *packet)
 {
     bool clientWantsToQuit = false;
 
-    // cout << "processPacket" << endl;
     switch (packet->getCmd())
     {
         case CmdType::PROFILE:
@@ -255,15 +246,9 @@ void *fromClient(void *_conn)
     bool clientWantsToQuit = false;
     while (!clientWantsToQuit && !conn->isClosed())
     {
-        // cout << "entrou aqui" << endl;
         Packet *packet = conn->receivePacket();
 
-        // cout << "Payload: " << packet->getPayload() << endl;
-
         clientWantsToQuit = processPacket(conn, profile, packet);
-
-        // Packet *yep = new Packet(CmdType::SEND, "Yep!", "server");
-        // conn->sendPacket(yep);
     }
 
     conn->close();
@@ -277,7 +262,6 @@ void *sendAlive(void *_conn)
         for (int i = 0; i < listBackups->size(); i++)
         {
             cout << i << endl;
-            // listConnections->at(i)->sendPacket(new Packet(CmdType::ALIVE));
         }
     }
 }
@@ -291,9 +275,7 @@ void *receiveAlive(void *_conn)
         try
         {
             Packet *packet = primary_conn->receivePacket();
-            cout << packet->getCmd() << " " << packet->getPayload() << endl;
             Profile *profile = profiles->getProfileById(packet->getSender());
-            cout << "chamando processPacket " << profile << " sender:" << packet->getSender() << endl;
             processPacket(nullptr, profile, packet);
         }
         catch (...)
@@ -431,11 +413,10 @@ int main(int argc, char *argv[])
         routerConn->sendPacket(new Packet(CmdType::SET_PRIMARY_IF_NOT_EXISTS, currentServerAddr));
         Packet *routerResponse = routerConn->receivePacket();
 
-        cout << "(Router) getCmd: " << routerResponse->getCmd() << endl;
-        string payload = routerResponse->getPayload();
+    string payload = routerResponse->getPayload();
         
-        switch (routerResponse->getCmd())
-        {
+    switch (routerResponse->getCmd())
+    {
         case CmdType::SET_PRIMARY:
             // if Server addr returned == current server addr => current server is primary
             if(strcmp(payload.c_str(), currentServerAddr.c_str()) == 0){
@@ -456,17 +437,12 @@ int main(int argc, char *argv[])
         routerConn->sendPacket(new Packet(CmdType::CLOSE_CONN));
         routerConn->close();
 
-
         if (backup)
         {
-            //string payload = routerResponse->getPayload();
-            cout << "Payload: " << payload << endl;
             size_t pos = payload.find(':');
             string addr = payload.substr(0, pos);
             string port = payload.substr(pos + 1);
 
-            cout << "Port: " << port << endl;
-            cout << "Addr: " << addr << endl;
             Connection *primaryConn = new Connection(stoi(port), addr.c_str());
             primaryConn->sendPacket(new Packet(CmdType::SET_BACKUP, currentServerAddr));
 
@@ -504,7 +480,6 @@ int main(int argc, char *argv[])
     while (true)
     {
         ClientConnection *conn = server->waitClient();
-        cout << "Passou do waitClient" << endl;
         pthread_t *th = new pthread_t();
         if (pthread_create(th, NULL, fromClient, conn) != 0)
         {
