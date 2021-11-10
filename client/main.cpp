@@ -48,7 +48,7 @@ void sendPresentation(char *profile)
 
 pthread_mutex_t updateMutex = PTHREAD_MUTEX_INITIALIZER;
 
-void updateConn()
+void updateConn(bool sendOk)
 {
     pthread_mutex_lock(&updateMutex);
 
@@ -87,7 +87,10 @@ void updateConn()
                 if(con){
                     cout << "conectou " << con->isClosed() << endl;
                 }
-                //con->sendPacket(new Packet(CmdType::OK, "", profile));
+                if(sendOk){
+                    // Sending profile to new Primary server (to update the session/conection)
+                    con->sendPacket(new Packet(CmdType::OK, "", profile));
+                }
             }
             catch (...)
             {
@@ -142,8 +145,8 @@ void *toServer(void *args)
             }
             catch (...)
             {
-                updateConn();
-                con->sendPacket(new Packet(CmdType::OK, "", profile));
+                updateConn(true);
+            
             }
         }
         else
@@ -183,8 +186,8 @@ void *fromServer(void *args)
         catch (...)
         {
             // Entra aqui quando o server for desligado (simulação de um crash)
-            updateConn();
-            con->sendPacket(new Packet(CmdType::OK, "", profile));
+            updateConn(true);
+
         }
     }
 
@@ -213,7 +216,7 @@ int main(int argc, char *argv[])
 
     signal(SIGINT, interruptionHandler);
 
-    updateConn();
+    updateConn(false);
     pthread_create(&toServerTh, NULL, toServer, profile);
     pthread_create(&fromServerTh, NULL, fromServer, NULL);
 
