@@ -47,15 +47,11 @@ bool ProfilesManager::hasProfile(string profileId)
 
 void ProfilesManager::addFollowerTo(string followed, Profile *follower)
 {
-    cout << "addFollowerTo" << endl;
-
     if (follower->getProfileId() == followed)
     {
-        cout << "entrei no if" << endl;
         return;
     }
 
-    cout << "passei do if" << endl;
     cout << follower->getProfileId() << " wants to follow " << followed << endl;
 
     Profile *profileToFollow = this->getProfileById(followed);
@@ -155,7 +151,6 @@ Profile *ProfilesManager::createProfileIfNotExists(string profileId, ClientConne
     }
     else
     {
-        cout << "else" << endl;
         profile = new Profile(profileId);
         this->insertProfile(profileId, profile);
         cout << "Profile " << profileId << " was created." << endl;

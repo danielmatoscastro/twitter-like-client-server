@@ -70,12 +70,9 @@ void *fromClient(void *_conn)
             }
             case CmdType::SET_PRIMARY:
             {
-                cout << "Set Primary recebido" << endl;
                 setPrimary(packet);
                 Packet *payload = new Packet(CmdType::OK, primaryServer);
                 conn->sendPacket(payload);
-                
-                cout << "Enviou a resposta ao Set Primary" << endl;
                 break;
             }
             case CmdType::GET_PRIMARY:
@@ -86,14 +83,12 @@ void *fromClient(void *_conn)
             }
             case CmdType::CLOSE_CONN:
             {
-                cout << "client wants to quit" << endl;
                 clientWantsToQuit = true;
 
                 break;
             }
             default:
             {
-                cout << "I dont know..." << endl;
                 break;
             }
         }
