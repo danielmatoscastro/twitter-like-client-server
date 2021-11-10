@@ -19,6 +19,7 @@ public:
     vector<Profile *> *getFollowers();
     void incSessionsOn(ClientConnection *conn);
     void decSessionsOn(ClientConnection *conn);
+    void updateSessionsOn(ClientConnection *conn);
     void sendOrInsertInbox(Packet *packet);
     void fetchInboxContent();
     vector<ClientConnection *> *getSessions();

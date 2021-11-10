@@ -54,6 +54,13 @@ void Profile::decSessionsOn(ClientConnection *conn)
     pthread_mutex_unlock(&m);
 }
 
+void Profile::updateSessionsOn(ClientConnection *conn)
+{
+    pthread_mutex_lock(&m);
+    this->sessions->push_back(conn);
+    pthread_mutex_unlock(&m);
+}
+
 void Profile::sendOrInsertInbox(Packet *packet)
 {
     pthread_mutex_lock(&m);

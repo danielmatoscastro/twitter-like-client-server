@@ -143,6 +143,7 @@ void *toServer(void *args)
             catch (...)
             {
                 updateConn();
+                con->sendPacket(new Packet(CmdType::OK, "", profile));
             }
         }
         else
@@ -183,6 +184,7 @@ void *fromServer(void *args)
         {
             // Entra aqui quando o server for desligado (simulação de um crash)
             updateConn();
+            con->sendPacket(new Packet(CmdType::OK, "", profile));
         }
     }
 
