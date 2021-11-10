@@ -110,7 +110,7 @@ void sendElectionMsg(string serverAddr){
         Packet *electionPacket = new Packet(CmdType::ELECTION, serverAddr);
         nextElectionServer->sendPacket(electionPacket);
         
-        nextElectionServer->sendPacket(new Packet(CmdType::CLOSE_CONN, ""));
+        //nextElectionServer->sendPacket(new Packet(CmdType::CLOSE_CONN, ""));
         nextElectionServer->close();
     }
     else{
@@ -154,7 +154,7 @@ void sendElectedMsg(string serverAddr, bool setPrimary){
         Packet *electedPacket = new Packet(CmdType::ELECTED, serverAddr);
         nextElectionServer->sendPacket(electedPacket);
 
-        nextElectionServer->sendPacket(new Packet(CmdType::CLOSE_CONN, ""));
+        //nextElectionServer->sendPacket(new Packet(CmdType::CLOSE_CONN, ""));
         nextElectionServer->close();
     }              
     else {
@@ -280,6 +280,7 @@ void *receiveAlive(void *_conn)
         }
         catch (...)
         {
+            primary_conn->close();
             // Entra aqui quando o server for desligado (simulação de um crash)
             cout << "Entrou no catch" << endl;
 
@@ -303,6 +304,7 @@ void *receiveAlive(void *_conn)
                 cout << "Saiu de sendElectionMessage" << endl;
             }
             cout << "vai fechar a thread" << endl;
+
             pthread_exit(NULL);
         }
     }
@@ -324,39 +326,44 @@ void *electionHandler(void *_conn){
         {
             case CmdType::ELECTION:
             {
-                cout << "Received ELECTION message from: " << electionPacket->getPayload() << endl;
-                //int idComp = strcmp(electionPacket->getPayload().c_str(), currentServerAddr.c_str());
+                cout << "Received ELECTION message: " << electionPacket->getPayload() << endl;
+                int idComp = strcmp(electionPacket->getPayload().c_str(), currentServerAddr.c_str());
 
                 // //if msg id > id -> send; electionStarted
                 // //else msg id < id && !electionStarted; -> send(id); electionStarted
                 // //else msg id < id && electionStarted -> do nothing
                 // //else msg id = id -> isPrimary = true;
 
-                // if(idComp > 0){
-                //     sendElectionMsg(electionPacket->getPayload());
-                // }
-                // else if(idComp < 0 && !electionStarted){
-                //     sendElectionMsg(currentServerAddr);
-                // }
-                // else if(idComp == 0){ // if msg id == current server id => current server was elected as primary
-                //     sendElectedMsg(currentServerAddr, true);
-                // }
-                pthread_exit(nullptr);
+                if(idComp > 0){
+                    sendElectionMsg(electionPacket->getPayload());
+                }
+                else if(idComp < 0 && !electionStarted){
+                    sendElectionMsg(currentServerAddr);
+                }
+                else if(idComp == 0){ // if msg id == current server id => current server was elected as primary
+                    sendElectedMsg(currentServerAddr, true);
+                }
+
+                conn->close();
+                pthread_exit(nullptr); // temporary fix - sem isso fica preso/resulta em crash
 
                 break;
             }
             case CmdType::ELECTED:
             {
-                // int idComp = strcmp(electionPacket->getPayload().c_str(), currentServerAddr.c_str());
+                cout << "Received ELECTED message: " << electionPacket->getPayload() << endl;
+                int idComp = strcmp(electionPacket->getPayload().c_str(), currentServerAddr.c_str());
 
 
-                // if(idComp != 0){ // if msg id != id => current server isn't the elected server, so propagate message forward 
-                //     sendElectedMsg(currentServerAddr, false);
-                //     backup = true;
-                // }
-                // else{
-                //     backup = false;
-                // }
+                if(idComp != 0){ // if msg id != id => current server isn't the elected server, so propagate message forward 
+                    sendElectedMsg(currentServerAddr, false);
+                    backup = true;
+                }
+                else{
+                    backup = false;
+                    
+                }
+
                 conn->close();
                 electionSocket->close();
                 pthread_exit(nullptr);
@@ -413,25 +420,25 @@ int main(int argc, char *argv[])
         routerConn->sendPacket(new Packet(CmdType::SET_PRIMARY_IF_NOT_EXISTS, currentServerAddr));
         Packet *routerResponse = routerConn->receivePacket();
 
-    string payload = routerResponse->getPayload();
+        string payload = routerResponse->getPayload();
         
-    switch (routerResponse->getCmd())
-    {
-        case CmdType::SET_PRIMARY:
-            // if Server addr returned == current server addr => current server is primary
-            if(strcmp(payload.c_str(), currentServerAddr.c_str()) == 0){
-                cout << "Sou primario" << endl;
+        switch (routerResponse->getCmd())
+        {
+            case CmdType::SET_PRIMARY:
+                // if Server addr returned == current server addr => current server is primary
+                if(strcmp(payload.c_str(), currentServerAddr.c_str()) == 0){
+                    cout << "Sou primario" << endl;
+                    backup = false;
+                }
+                else{
+                    cout << "Sou backup!" << endl;
+                    backup = true;
+                }
+                break;
+            case CmdType::OK:
+                cout << "Sou primario!" << endl;
                 backup = false;
-            }
-            else{
-                cout << "Sou backup!" << endl;
-                backup = true;
-            }
-            break;
-        case CmdType::OK:
-            cout << "Sou primario!" << endl;
-            backup = false;
-            break;
+                break;
         }
 
         routerConn->sendPacket(new Packet(CmdType::CLOSE_CONN));
@@ -442,6 +449,9 @@ int main(int argc, char *argv[])
             size_t pos = payload.find(':');
             string addr = payload.substr(0, pos);
             string port = payload.substr(pos + 1);
+
+            cout << "addr: " << addr << endl;
+            cout << "port: " << port << endl;
 
             Connection *primaryConn = new Connection(stoi(port), addr.c_str());
             primaryConn->sendPacket(new Packet(CmdType::SET_BACKUP, currentServerAddr));
