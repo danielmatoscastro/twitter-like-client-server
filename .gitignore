@@ -1,0 +1,14 @@
+/client/cmake-build-debug/
+/server/cmake-build-debug/
+/cmake_install.cmake
+/CMakeCache.txt
+/CMakeFiles/
+/client/client_output/
+/server/CMakeFiles/
+/server/server_output/
+/server/CMakeCache.txt
+**/*.o
+server/server
+client/client
+router/router
+.vscode
